@@ -294,13 +294,14 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                 var app = PublicClientApplicationBuilder.Create(MsalTestConstants.ClientId)
                                                         .WithAuthority(new Uri(ClientApplicationBase.DefaultAuthority), true)
                                                         .WithHttpManager(httpManager)
-                                                        .WithClaims(MsalTestConstants.Claims)
                                                         .WithExtraQueryParameters(MsalTestConstants.ExtraQueryParams)
                                                         .BuildConcrete();
 
                 var result = await app
-                    .AcquireTokenByIntegratedWindowsAuthAsync(MsalTestConstants.Scope, MsalTestConstants.User.Username)
-                    .ConfigureAwait(false);
+                    .AcquireTokenByIntegratedWindowsAuth(MsalTestConstants.Scope)
+                                                        .WithClaims(MsalTestConstants.Claims)
+                                                        .WithUsername(MsalTestConstants.User.Username)
+                                                        .ExecuteAsync().ConfigureAwait(false);
 
                 Assert.IsNotNull(result);
                 Assert.AreEqual("some-access-token", result.AccessToken);
@@ -394,7 +395,7 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                 Assert.AreEqual("parsing_ws_metadata_exchange_failed", result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -427,10 +428,10 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                         _secureString).ConfigureAwait(false));
 
                 // Check exception message
-                Assert.AreEqual(CoreErrorCodes.ParsingWsTrustResponseFailed, result.ErrorCode);
+                Assert.AreEqual(MsalError.ParsingWsTrustResponseFailed, result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -464,7 +465,7 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                 Assert.AreEqual("Response status code does not indicate success: 404 (NotFound).", result.Message);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -500,10 +501,10 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                         str).ConfigureAwait(false));
 
                 // Check inner exception
-                Assert.AreEqual(CoreErrorCodes.ParsingWsTrustResponseFailed, result.ErrorCode);
+                Assert.AreEqual(MsalError.ParsingWsTrustResponseFailed, result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -543,10 +544,10 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                         _secureString).ConfigureAwait(false));
 
                 // Check inner exception
-                Assert.AreEqual(CoreErrorCodes.InvalidRequest, result.ErrorCode);
+                Assert.AreEqual(MsalError.InvalidRequest, result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -595,10 +596,10 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                         _secureString).ConfigureAwait(false));
 
                 // Check inner exception
-                Assert.AreEqual(CoreErrorCodes.InvalidRequest, result.ErrorCode);
+                Assert.AreEqual(MsalError.InvalidRequest, result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -668,7 +669,7 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                 Assert.AreEqual(MsalError.PasswordRequiredForManagedUserError, result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 
@@ -711,10 +712,10 @@ namespace Microsoft.Identity.Test.Unit.RequestsTests
                         str).ConfigureAwait(false));
 
                 // Check error code
-                Assert.AreEqual(CoreErrorCodes.InvalidGrantError, result.ErrorCode);
+                Assert.AreEqual(MsalError.InvalidGrantError, result.ErrorCode);
 
                 // There should be no cached entries.
-                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.AccessTokenCount);
+                Assert.AreEqual(0, app.UserTokenCacheInternal.Accessor.GetAllAccessTokens().Count());
             }
         }
 #endif

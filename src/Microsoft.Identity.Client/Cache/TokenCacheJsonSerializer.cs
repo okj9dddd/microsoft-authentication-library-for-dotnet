@@ -25,7 +25,9 @@
 // 
 // ------------------------------------------------------------------------------
 
+using System;
 using Microsoft.Identity.Client.Cache.Items;
+using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Client.Utils;
 
 namespace Microsoft.Identity.Client.Cache
@@ -66,17 +68,28 @@ namespace Microsoft.Identity.Client.Cache
                                 .ToString()] = accountItem;
             }
 
+            foreach (var appMetadata in _accessor.GetAllAppMetadata())
+            {
+                cache.AppMetadata[appMetadata.GetKey()
+                    .ToString()] = appMetadata;
+            }
+
             return cache.ToJsonString()
                         .ToByteArray();
         }
 
         public void Deserialize(byte[] bytes)
         {
-            // TODO: Potentially remove for allowing merging of cache files. Additional parameter to be added to the deserialize method.
-            _accessor.Clear();
+            CacheSerializationContract cache;
 
-            // TODO: Try/Catch for meaningful App Developer handling of merge/upgrade scenarios
-            var cache = CacheSerializationContract.FromJsonString(CoreHelpers.ByteArrayToString(bytes));
+            try
+            {
+                cache = CacheSerializationContract.FromJsonString(CoreHelpers.ByteArrayToString(bytes));
+            }
+            catch (Exception ex)
+            {
+                throw MsalExceptionFactory.GetClientException(MsalError.JsonParseError, MsalErrorMessage.TokenCacheJsonSerializerFailedParse, ex);
+            }
 
             if (cache.AccessTokens != null)
             {
@@ -107,6 +120,14 @@ namespace Microsoft.Identity.Client.Cache
                 foreach (var account in cache.Accounts.Values)
                 {
                     _accessor.SaveAccount(account);
+                }
+            }
+
+            if (cache.AppMetadata != null)
+            {
+                foreach (var appMetadata in cache.AppMetadata.Values)
+                {
+                    _accessor.SaveAppMetadata(appMetadata);
                 }
             }
         }

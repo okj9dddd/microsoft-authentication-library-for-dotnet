@@ -37,6 +37,7 @@ using Microsoft.Identity.Test.Common.Core.Helpers;
 using Microsoft.Identity.Test.Common.Core.Mocks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSubstitute;
+using Microsoft.Identity.Client.Exceptions;
 
 namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
 {
@@ -253,7 +254,7 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
             // Assert 
             AssertCacheEntryCount(6);
 
-            _logger.Received().Error(Arg.Is<string>(CoreErrorMessages.InternalErrorCacheEmptyUsername));
+            _logger.Received().Error(Arg.Is<string>(MsalErrorMessage.InternalErrorCacheEmptyUsername));
         }
 
         [TestMethod]
@@ -328,6 +329,40 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
             _logger.Received().Error(Arg.Is<string>(CacheFallbackOperations.DifferentAuthorityError));
 
             _logger.Received().Error(Arg.Is<string>(CacheFallbackOperations.DifferentEnvError));
+        }
+
+
+        [TestMethod]
+        public void DoNotWriteFRTs()
+        {
+            // Arrange
+            _legacyCachePersistence.ThrowOnWrite = true;
+
+            var rtItem = new MsalRefreshTokenCacheItem(
+                MsalTestConstants.ProductionPrefNetworkEnvironment,
+                MsalTestConstants.ClientId,
+                "someRT",
+                MockHelpers.CreateClientInfo("u1", "ut1"),
+                "familyId");
+
+            var idTokenCacheItem = new MsalIdTokenCacheItem(
+                MsalTestConstants.ProductionPrefNetworkEnvironment, // different env
+                MsalTestConstants.ClientId,
+                MockHelpers.CreateIdToken("u1", "username"),
+                MockHelpers.CreateClientInfo("u1", "ut1"),
+                "ut1");
+
+            // Act
+            CacheFallbackOperations.WriteAdalRefreshToken(
+                _logger,
+                _legacyCachePersistence,
+                rtItem,
+                idTokenCacheItem,
+                "https://some_env.com/common", // yet another env
+                "uid",
+                "scope1");
+
+            AssertCacheEntryCount(0);
         }
 
         private void PopulateLegacyCache(ILegacyCachePersistence legacyCachePersistence)

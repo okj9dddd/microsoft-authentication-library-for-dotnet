@@ -35,6 +35,7 @@ using Microsoft.Identity.Client.ApiConfig.Parameters;
 using Microsoft.Identity.Client.Core;
 using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Client.Http;
+using Microsoft.Identity.Client.Internal.Broker;
 using Microsoft.Identity.Client.OAuth2;
 using Microsoft.Identity.Client.TelemetryCore;
 using Microsoft.Identity.Client.UI;
@@ -50,6 +51,7 @@ namespace Microsoft.Identity.Client.Internal.Requests
         private string _codeVerifier;
         private string _state;
         private readonly AcquireTokenInteractiveParameters _interactiveParameters;
+        private MsalTokenResponse _msalTokenResponse;
 
         public InteractiveRequest(
             IServiceBundle serviceBundle,
@@ -64,15 +66,15 @@ namespace Microsoft.Identity.Client.Internal.Requests
 
             // todo(migration): can't this just come directly from interactive parameters instead of needing do to this?
             _extraScopesToConsent = new SortedSet<string>();
-            if (!interactiveParameters.ExtraScopesToConsent.IsNullOrEmpty())
+            if (!_interactiveParameters.ExtraScopesToConsent.IsNullOrEmpty())
             {
-                _extraScopesToConsent = ScopeHelper.CreateSortedSetFromEnumerable(interactiveParameters.ExtraScopesToConsent);
+                _extraScopesToConsent = ScopeHelper.CreateSortedSetFromEnumerable(_interactiveParameters.ExtraScopesToConsent);
             }
 
             ValidateScopeInput(_extraScopesToConsent);
 
             _webUi = webUi;
-            interactiveParameters.LogParameters(authenticationRequestParameters.RequestContext.Logger);
+            _interactiveParameters.LogParameters(authenticationRequestParameters.RequestContext.Logger);
         }
 
         protected override void EnrichTelemetryApiEvent(ApiEvent apiEvent)
@@ -89,13 +91,31 @@ namespace Microsoft.Identity.Client.Internal.Requests
             await ResolveAuthorityEndpointsAsync().ConfigureAwait(false);
             await AcquireAuthorizationAsync(cancellationToken).ConfigureAwait(false);
             VerifyAuthorizationResult();
-            var msalTokenResponse = await SendTokenRequestAsync(GetBodyParameters(), cancellationToken).ConfigureAwait(false);
-            return CacheTokenResponseAndCreateAuthenticationResult(msalTokenResponse);
+
+            if (AuthenticationRequestParameters.IsBrokerEnabled)
+            {
+                var brokerInteractiveRequest = new BrokerInteractiveRequest(
+                    AuthenticationRequestParameters,
+                    _interactiveParameters,
+                    ServiceBundle,
+                    _authorizationResult);
+
+                if (brokerInteractiveRequest.IsBrokerInvocationRequired())
+                {
+                    _msalTokenResponse = await brokerInteractiveRequest.SendTokenRequestToBrokerAsync().ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                _msalTokenResponse = await SendTokenRequestAsync(GetBodyParameters(), cancellationToken).ConfigureAwait(false);
+            }
+
+            return CacheTokenResponseAndCreateAuthenticationResult(_msalTokenResponse);
         }
 
         private async Task AcquireAuthorizationAsync(CancellationToken cancellationToken)
         {
-            var authorizationUri = CreateAuthorizationUri(true, true);
+            var authorizationUri = CreateAuthorizationUri(true);
 
             var uiEvent = new UiEvent();
             using (ServiceBundle.TelemetryManager.CreateTelemetryHelper(
@@ -132,21 +152,18 @@ namespace Microsoft.Identity.Client.Internal.Requests
             return dict;
         }
 
-        private Uri CreateAuthorizationUri(bool addVerifier = false, bool addState = false)
+        private Uri CreateAuthorizationUri(bool addPkceAndState = false)
         {
             IDictionary<string, string> requestParameters = CreateAuthorizationRequestParameters();
 
-            if (addVerifier)
+            if (addPkceAndState)
             {
                 _codeVerifier = ServiceBundle.PlatformProxy.CryptographyManager.GenerateCodeVerifier();
                 string codeVerifierHash = ServiceBundle.PlatformProxy.CryptographyManager.CreateBase64UrlEncodedSha256Hash(_codeVerifier);
 
                 requestParameters[OAuth2Parameter.CodeChallenge] = codeVerifierHash;
                 requestParameters[OAuth2Parameter.CodeChallengeMethod] = OAuth2Value.CodeChallengeMethodValue;
-            }
 
-            if (addState)
-            {
                 _state = Guid.NewGuid().ToString() + Guid.NewGuid().ToString();
                 requestParameters[OAuth2Parameter.State] = _state;
             }
@@ -182,7 +199,7 @@ namespace Microsoft.Identity.Client.Internal.Requests
         }
 
         private static void CheckForDuplicateQueryParameters(
-            IDictionary<string, string> queryParamsDictionary, 
+            IDictionary<string, string> queryParamsDictionary,
             IDictionary<string, string> requestParameters)
         {
             foreach (KeyValuePair<string, string> kvp in queryParamsDictionary)
@@ -235,14 +252,14 @@ namespace Microsoft.Identity.Client.Internal.Requests
             {
                 authorizationRequestParameters[OAuth2Parameter.Prompt] = _interactiveParameters.Prompt.PromptValue;
             }
-            
+
             return authorizationRequestParameters;
         }
 
         private void VerifyAuthorizationResult()
         {
-            if (_authorizationResult.Status == AuthorizationStatus.Success && !_state.Equals(
-                    _authorizationResult.State,
+            if (_authorizationResult.Status == AuthorizationStatus.Success &&
+                !_state.Equals(_authorizationResult.State,
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new MsalClientException(

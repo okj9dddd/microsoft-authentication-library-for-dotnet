@@ -27,6 +27,7 @@
 
 using System;
 using Microsoft.Identity.Client.Cache;
+using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Client.PlatformsCommon.Factories;
 
 namespace Microsoft.Identity.Client.AppConfig
@@ -74,18 +75,6 @@ namespace Microsoft.Identity.Client.AppConfig
             return this;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="enableBroker"></param>
-        /// <returns></returns>
-        internal PublicClientApplicationBuilder WithBroker(bool enableBroker)
-        {
-            // TODO: * This should become public only on mobile platforms that support using a broker
-            Config.IsBrokerEnabled = enableBroker;
-            return this;
-        }
-
 #if !ANDROID_BUILDTIME && !WINDOWS_APP_BUILDTIME && !NET_CORE_BUILDTIME && !DESKTOP_BUILDTIME && !MAC_BUILDTIME
         /// <summary>
         /// 
@@ -96,10 +85,21 @@ namespace Microsoft.Identity.Client.AppConfig
         {
 #if iOS
             Config.IosKeychainSecurityGroup = keychainSecurityGroup;
+#endif // iOS 
             return this;
-#else
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="enableBroker"></param>
+        /// <returns></returns>
+        private PublicClientApplicationBuilder WithBroker(bool enableBroker)
+        {
+#if iOS
+            Config.IsBrokerEnabled = enableBroker;
+#endif // iOS
             return this;
-#endif // iOS || NETSTANDARD1_3
         }
 #endif // !ANDROID_BUILDTIME && !WINDOWS_APP_BUILDTIME && !NET_CORE_BUILDTIME && !DESKTOP_BUILDTIME && !MAC_BUILDTIME
 
@@ -146,7 +146,7 @@ namespace Microsoft.Identity.Client.AppConfig
 
             if (!Uri.TryCreate(Config.RedirectUri, UriKind.Absolute, out Uri uriResult))
             {
-                throw new InvalidOperationException(CoreErrorMessages.InvalidRedirectUriReceived(Config.RedirectUri));
+                throw new InvalidOperationException(MsalErrorMessage.InvalidRedirectUriReceived(Config.RedirectUri));
             }
         }
     }

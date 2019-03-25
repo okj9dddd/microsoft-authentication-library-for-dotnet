@@ -36,44 +36,33 @@ namespace Microsoft.Identity.Client.ApiConfig
 {
     /// <inheritdoc />
     /// <summary>
+    /// Parameter builder for the <see cref="IClientApplicationBase.AcquireTokenSilent(IEnumerable{string}, IAccount)"/>
+    /// operation. See https://aka.ms/msal-net-acquiretokensilent
     /// </summary>
     public sealed class AcquireTokenSilentParameterBuilder :
         AbstractClientAppBaseAcquireTokenParameterBuilder<AcquireTokenSilentParameterBuilder>
     {
         private AcquireTokenSilentParameters Parameters { get; } = new AcquireTokenSilentParameters();
 
-        /// <inheritdoc />
-        internal AcquireTokenSilentParameterBuilder(IClientApplicationBase clientApplicationBase)
-            : base(clientApplicationBase)
+        internal AcquireTokenSilentParameterBuilder(IClientApplicationBaseExecutor clientApplicationBaseExecutor)
+            : base(clientApplicationBaseExecutor)
         {
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name="clientApplicationBase"></param>
-        /// <param name="scopes"></param>
-        /// <param name="account"></param>
-        /// <returns></returns>
         internal static AcquireTokenSilentParameterBuilder Create(
-            IClientApplicationBase clientApplicationBase,
+            IClientApplicationBaseExecutor clientApplicationBaseExecutor,
             IEnumerable<string> scopes,
             IAccount account)
         {
-            return new AcquireTokenSilentParameterBuilder(clientApplicationBase).WithScopes(scopes).WithAccount(account);
+            return new AcquireTokenSilentParameterBuilder(clientApplicationBaseExecutor).WithScopes(scopes).WithAccount(account);
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name="clientApplicationBase"></param>
-        /// <param name="scopes"></param>
-        /// <param name="loginHint"></param>
-        /// <returns></returns>
         internal static AcquireTokenSilentParameterBuilder Create(
-            IClientApplicationBase clientApplicationBase,
+            IClientApplicationBaseExecutor clientApplicationBaseExecutor,
             IEnumerable<string> scopes,
             string loginHint)
         {
-            return new AcquireTokenSilentParameterBuilder(clientApplicationBase).WithScopes(scopes).WithLoginHint(loginHint);
+            return new AcquireTokenSilentParameterBuilder(clientApplicationBaseExecutor).WithScopes(scopes).WithLoginHint(loginHint);
         }
 
 
@@ -110,9 +99,9 @@ namespace Microsoft.Identity.Client.ApiConfig
         }
 
         /// <inheritdoc />
-        internal override Task<AuthenticationResult> ExecuteAsync(IClientApplicationBaseExecutor executor, CancellationToken cancellationToken)
+        internal override Task<AuthenticationResult> ExecuteInternalAsync(CancellationToken cancellationToken)
         {
-            return executor.ExecuteAsync(CommonParameters, Parameters, cancellationToken);
+            return ClientApplicationBaseExecutor.ExecuteAsync(CommonParameters, Parameters, cancellationToken);
         }
 
         /// <inheritdoc />

@@ -30,8 +30,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client.ApiConfig.Parameters;
+using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Client.Extensibility;
 using Microsoft.Identity.Client.TelemetryCore;
+
+#if iOS
+using UIKit;
+#endif
 
 #if ANDROID
 using Android.App;
@@ -44,7 +49,7 @@ using System.Windows.Forms;
 namespace Microsoft.Identity.Client.ApiConfig
 {
     /// <summary>
-    /// Builder for an Interactive token request
+    /// Builder for an Interactive token request. See https://aka.ms/msal-net-acquire-token-interactively
     /// </summary>
     public sealed class AcquireTokenInteractiveParameterBuilder :
         AbstractPublicClientAcquireTokenParameterBuilder<AcquireTokenInteractiveParameterBuilder>
@@ -52,9 +57,8 @@ namespace Microsoft.Identity.Client.ApiConfig
         private object _ownerWindow;
         private AcquireTokenInteractiveParameters Parameters { get; } = new AcquireTokenInteractiveParameters();
 
-        /// <inheritdoc />
-        internal AcquireTokenInteractiveParameterBuilder(IPublicClientApplication publicClientApplication)
-            : base(publicClientApplication)
+        internal AcquireTokenInteractiveParameterBuilder(IPublicClientApplicationExecutor publicClientApplicationExecutor)
+            : base(publicClientApplicationExecutor)
         {
         }
 
@@ -64,20 +68,21 @@ namespace Microsoft.Identity.Client.ApiConfig
             Parameters.CustomWebUi = customWebUi;
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name="publicClientApplication"></param>
-        /// <param name="scopes"></param>
-        /// <param name="parent"></param>
-        /// <returns></returns>
         internal static AcquireTokenInteractiveParameterBuilder Create(
-            IPublicClientApplication publicClientApplication,
+            IPublicClientApplicationExecutor publicClientApplicationExecutor,
             IEnumerable<string> scopes,
             object parent)
         {
-            return new AcquireTokenInteractiveParameterBuilder(publicClientApplication)
+            return new AcquireTokenInteractiveParameterBuilder(publicClientApplicationExecutor)
+                .WithCurrentSynchronizationContext()
                 .WithScopes(scopes)
                 .WithParent(parent);
+        }
+
+        internal AcquireTokenInteractiveParameterBuilder WithCurrentSynchronizationContext()
+        {
+            Parameters.UiParent.SynchronizationContext = SynchronizationContext.Current;
+            return this;
         }
 
         /// <summary>
@@ -156,21 +161,27 @@ namespace Microsoft.Identity.Client.ApiConfig
 #if ANDROID
             if (_ownerWindow is Activity activity)
             {
-                Parameters.UiParent.SetAndroidActivity(activity);
+                Parameters.UiParent.Activity = activity;
+                Parameters.UiParent.CallerActivity = activity;
             }
             else
             {
-                throw new InvalidOperationException(CoreErrorMessages.ActivityRequiredForParentObjectAndroid);
+                throw new InvalidOperationException(MsalErrorMessage.ActivityRequiredForParentObjectAndroid);
+            }
+#elif iOS
+            if(_ownerWindow is UIViewController uiViewController)
+            {
+                Parameters.UiParent.CallerViewController = uiViewController;
             }
 
 #elif DESKTOP
             if (_ownerWindow is IWin32Window win32Window)
             {
-                Parameters.UiParent.SetOwnerWindow(win32Window);
+                Parameters.UiParent.OwnerWindow = win32Window;
             }
             else if (_ownerWindow is IntPtr intPtrWindow)
             {
-                Parameters.UiParent.SetOwnerWindow(intPtrWindow);
+                Parameters.UiParent.OwnerWindow = intPtrWindow;
             }
             // It's ok on Windows Desktop to not have an owner window, the system will just center on the display
             // instead of a parent.
@@ -186,9 +197,9 @@ namespace Microsoft.Identity.Client.ApiConfig
         }
 
         /// <inheritdoc />
-        internal override Task<AuthenticationResult> ExecuteAsync(IPublicClientApplicationExecutor executor, CancellationToken cancellationToken)
+        internal override Task<AuthenticationResult> ExecuteInternalAsync(CancellationToken cancellationToken)
         {
-            return executor.ExecuteAsync(CommonParameters, Parameters, cancellationToken);
+            return PublicClientApplicationExecutor.ExecuteAsync(CommonParameters, Parameters, cancellationToken);
         }
 
         internal override ApiEvent.ApiIds CalculateApiEventId()

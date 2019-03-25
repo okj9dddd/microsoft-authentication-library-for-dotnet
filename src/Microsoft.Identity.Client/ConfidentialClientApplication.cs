@@ -39,6 +39,8 @@ using Microsoft.Identity.Client.ApiConfig.Parameters;
 using Microsoft.Identity.Client.AppConfig;
 using Microsoft.Identity.Client.Core;
 using Microsoft.Identity.Client.Http;
+using Microsoft.Identity.Client.ApiConfig.Executors;
+using Microsoft.Identity.Client.Exceptions;
 
 namespace Microsoft.Identity.Client
 {
@@ -175,7 +177,7 @@ namespace Microsoft.Identity.Client
         public async Task<AuthenticationResult> AcquireTokenOnBehalfOfAsync(IEnumerable<string> scopes, UserAssertion userAssertion)
         {
             GuardMobileFrameworks();
-            
+
             return await AcquireTokenOnBehalfOf(scopes, userAssertion).ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
@@ -354,7 +356,7 @@ namespace Microsoft.Identity.Client
 
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
-                throw new ArgumentNullException(nameof(refreshToken), CoreErrorMessages.NoRefreshTokenProvided);
+                throw new ArgumentNullException(nameof(refreshToken), MsalErrorMessage.NoRefreshTokenProvided);
             }
 
             return await ((IByRefreshToken)this).AcquireTokenByRefreshToken(scopes, refreshToken).ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
@@ -414,11 +416,15 @@ namespace Microsoft.Identity.Client
         // - Why isn't this method public?  -- it can't be public, it's an explicit interface implementation.
         // https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/interfaces/explicit-interface-implementation
         // - should it move to ClientApplicationBase to help PCA moving from ADAL V2 to MSAL V2+?
+        /// <inheritdoc />
         AcquireTokenByRefreshTokenParameterBuilder IByRefreshToken.AcquireTokenByRefreshToken(
             IEnumerable<string> scopes,
             string refreshToken)
         {
-            return AcquireTokenByRefreshTokenParameterBuilder.Create(this, scopes, refreshToken);
+            return AcquireTokenByRefreshTokenParameterBuilder.Create(
+                ClientExecutorFactory.CreateClientApplicationBaseExecutor(this),
+                scopes,
+                refreshToken);
         }
 
         internal ClientCredential ClientCredential => ServiceBundle.Config.ClientCredential;

@@ -29,6 +29,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Cache;
+using Microsoft.Identity.Client.OAuth2;
+using Microsoft.Identity.Client.Utils;
+using Microsoft.Identity.Test.Common.Core.Mocks;
 
 namespace Microsoft.Identity.Test.Unit
 {
@@ -67,7 +70,8 @@ namespace Microsoft.Identity.Test.Unit
         public const string B2CLoginAuthorityMoonCake = "https://sometenantid.b2clogin.cn/tfp/sometenantid/policy/";
         public const string B2CLoginAuthorityBlackforest = "https://sometenantid.b2clogin.de/tfp/sometenantid/policy/";
         public const string ClientId = "d3adb33f-c0de-ed0c-c0de-deadb33fc0d3";
-        public static readonly string ClientId_1 = "d3adb33f-c1de-ed1c-c1de-deadb33fc1d3";
+        public const string ClientId2 = "d3adb33f-c1de-ed1c-c1de-deadb33fc1d3";
+        public const string FamilyId = "1";
         public const string UniqueId = "unique_id";
         public const string IdentityProvider = "my-idp";
         public const string Name = "First Last";
@@ -91,7 +95,7 @@ namespace Microsoft.Identity.Test.Unit
         public const string FamilyName = "Doe";
         public const string Username = "joe@localhost.com";
 
-        public static readonly IDictionary<string, string> ExtraQueryParams 
+        public static readonly IDictionary<string, string> ExtraQueryParams
             = new Dictionary<string, string>()
             {
                 {"extra", "qp" },
@@ -124,6 +128,21 @@ namespace Microsoft.Identity.Test.Unit
             return string.Format(CultureInfo.InvariantCulture, "{0}.{1}", uid, utid);
         }
 
+        public static MsalTokenResponse CreateMsalTokenResponse()
+        {
+            return new MsalTokenResponse
+            {
+                IdToken = MockHelpers.CreateIdToken(MsalTestConstants.UniqueId, MsalTestConstants.DisplayableId),
+                AccessToken = "access-token",
+                ClientInfo = MockHelpers.CreateClientInfo(),
+                ExpiresIn = 3599,
+                CorrelationId = "correlation-id",
+                RefreshToken = "refresh-token",
+                Scope = MsalTestConstants.Scope.AsSingleString(),
+                TokenType = "Bearer"
+            };
+        }
+
         public static readonly Account User = new Account(UserIdentifier, DisplayableId, ProductionPrefNetworkEnvironment);
 
         public static readonly string OnPremiseAuthority = "https://fs.contoso.com/adfs/";
@@ -140,6 +159,9 @@ namespace Microsoft.Identity.Test.Unit
 
         public static readonly Account OnPremiseUser = new Account(
             string.Format(CultureInfo.InvariantCulture, "{0}.{1}", OnPremiseUid, OnPremiseUtid), OnPremiseDisplayableId, null);
+
+        public const string BrokerExtraQueryParameters = "extra=qp&key1=value1%20with%20encoded%20space&key2=value2";
+        public const string BrokerClaims = "testClaims";
 
 #if !ANDROID && !iOS && !WINDOWS_APP
         public static readonly ClientCredential OnPremiseCredentialWithSecret = new ClientCredential(ClientSecret);

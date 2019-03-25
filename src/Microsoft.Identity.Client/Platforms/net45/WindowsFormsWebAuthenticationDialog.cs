@@ -36,7 +36,6 @@ namespace Microsoft.Identity.Client.Platforms.net45
     /// <summary>
     /// The browser dialog used for user authentication
     /// </summary>
-    [Obsolete("This type should not be used and will be made internal.")]
     [ComVisible(true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public class WindowsFormsWebAuthenticationDialog : WindowsFormsWebAuthenticationDialogBase

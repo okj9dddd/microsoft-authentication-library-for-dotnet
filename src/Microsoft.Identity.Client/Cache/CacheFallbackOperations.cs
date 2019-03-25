@@ -31,6 +31,7 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.Identity.Client.Cache.Items;
 using Microsoft.Identity.Client.Core;
+using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Client.Internal;
 using Microsoft.Identity.Client.Utils;
 
@@ -56,7 +57,13 @@ namespace Microsoft.Identity.Client.Cache
             {
                 if (rtItem == null)
                 {
-                    logger.Info("No refresh token available. Skipping MSAL refresh token cache write");
+                    logger.Info("No refresh token available. Skipping writing to ADAL legacy cache.");
+                    return;
+                }
+
+                if (!string.IsNullOrEmpty(rtItem.FamilyId))
+                {
+                    logger.Info("Not writing FRT in ADAL legacy cache");
                     return;
                 }
 
@@ -81,7 +88,10 @@ namespace Microsoft.Identity.Client.Cache
                     ResourceInResponse = scope
                 };
 
-                IDictionary<AdalTokenCacheKey, AdalResultWrapper> dictionary = AdalCacheOperations.Deserialize(logger, legacyCachePersistence.LoadCache());
+                IDictionary<AdalTokenCacheKey, AdalResultWrapper> dictionary = AdalCacheOperations.Deserialize(
+                    logger,
+                    legacyCachePersistence.LoadCache());
+
                 dictionary[key] = wrapper;
                 legacyCachePersistence.WriteCache(AdalCacheOperations.Serialize(logger, dictionary));
             }
@@ -197,7 +207,7 @@ namespace Microsoft.Identity.Client.Cache
         {
             if (string.IsNullOrEmpty(displayableId))
             {
-                logger.Error(CoreErrorMessages.InternalErrorCacheEmptyUsername);
+                logger.Error(MsalErrorMessage.InternalErrorCacheEmptyUsername);
                 return;
             }
 

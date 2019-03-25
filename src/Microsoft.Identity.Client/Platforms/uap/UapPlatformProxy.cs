@@ -71,8 +71,8 @@ namespace Microsoft.Identity.Client.Platforms.uap
             if (users == null || !users.Any())
             {
                 throw MsalExceptionFactory.GetClientException(
-                    CoreErrorCodes.CannotAccessUserInformationOrUserNotDomainJoined,
-                    CoreErrorMessages.UapCannotFindDomainUser);
+                    MsalError.CannotAccessUserInformationOrUserNotDomainJoined,
+                    MsalErrorMessage.UapCannotFindDomainUser);
             }
 
             var getUserDetailTasks = users.Select(async u =>
@@ -111,14 +111,14 @@ namespace Microsoft.Identity.Client.Platforms.uap
             if (userDetails.Any(d => !string.IsNullOrWhiteSpace(d.Domain)))
             {
                 throw MsalExceptionFactory.GetClientException(
-                   CoreErrorCodes.CannotAccessUserInformationOrUserNotDomainJoined,
-                   CoreErrorMessages.UapCannotFindUpn);
+                   MsalError.CannotAccessUserInformationOrUserNotDomainJoined,
+                   MsalErrorMessage.UapCannotFindUpn);
             }
 
             // no domain, no upn -> missing User Info capability
             throw MsalExceptionFactory.GetClientException(
-                CoreErrorCodes.CannotAccessUserInformationOrUserNotDomainJoined,
-                CoreErrorMessages.UapCannotFindDomainUser);
+                MsalError.CannotAccessUserInformationOrUserNotDomainJoined,
+                MsalErrorMessage.UapCannotFindDomainUser);
 
         }
 
@@ -201,24 +201,16 @@ namespace Microsoft.Identity.Client.Platforms.uap
             return new EasClientDeviceInformation()?.Id.ToString();
         }
 
-        public override ILegacyCachePersistence CreateLegacyCachePersistence()
-        {
-            return new UapLegacyCachePersistence(Logger, CryptographyManager);
-        }
+        public override ILegacyCachePersistence CreateLegacyCachePersistence() => new UapLegacyCachePersistence(Logger, CryptographyManager);
 
-        public override ITokenCacheAccessor CreateTokenCacheAccessor()
-        {
-            return new InMemoryTokenCacheAccessor();
-        }
+        public override ITokenCacheAccessor CreateTokenCacheAccessor() => new InMemoryTokenCacheAccessor();
 
-        public override ITokenCacheBlobStorage CreateTokenCacheBlobStorage()
-        {
-            return new UapTokenCacheBlobStorage(CryptographyManager, Logger);
-        }
+        public override ITokenCacheBlobStorage CreateTokenCacheBlobStorage() => new UapTokenCacheBlobStorage(CryptographyManager, Logger);
 
         protected override IWebUIFactory CreateWebUiFactory() => new WebUIFactory();
         protected override ICryptographyManager InternalGetCryptographyManager() => new UapCryptographyManager();
         protected override IPlatformLogger InternalGetPlatformLogger() => new EventSourcePlatformLogger();
 
+        protected override IFeatureFlags CreateFeatureFlags() => new UapFeatureFlags();
     }
 }

@@ -26,12 +26,13 @@
 //------------------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.AppConfig;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Microsoft.Identity.Test.Unit.Integration
+namespace Microsoft.Identity.Test.Unit
 {
     [TestClass]
     public class ApplicationGrantIntegrationTest
@@ -68,19 +69,19 @@ namespace Microsoft.Identity.Test.Unit.Integration
             Assert.IsNull(res.Account);
 
             // make sure user cache is empty
-            Assert.AreEqual(0, userCache.Accessor.AccessTokenCount);
-            Assert.AreEqual(0, userCache.Accessor.RefreshTokenCount);
-            Assert.AreEqual(0, userCache.Accessor.IdTokenCount);
-            Assert.AreEqual(0, userCache.Accessor.AccountCount);
+            Assert.AreEqual(0, userCache.Accessor.GetAllAccessTokens().Count());
+            Assert.AreEqual(0, userCache.Accessor.GetAllRefreshTokens().Count());
+            Assert.AreEqual(0, userCache.Accessor.GetAllIdTokens().Count());
+            Assert.AreEqual(0, userCache.Accessor.GetAllAccounts().Count());
 
             // make sure nothing was written to legacy cache
             Assert.IsNull(userCache.LegacyPersistence.LoadCache());
 
             // make sure only AT entity was stored in the App msal cache
-            Assert.AreEqual(1, appCache.Accessor.AccessTokenCount);
-            Assert.AreEqual(0, appCache.Accessor.RefreshTokenCount);
-            Assert.AreEqual(0, appCache.Accessor.IdTokenCount);
-            Assert.AreEqual(0, appCache.Accessor.AccountCount);
+            Assert.AreEqual(1, userCache.Accessor.GetAllAccessTokens().Count());
+            Assert.AreEqual(0, appCache.Accessor.GetAllRefreshTokens().Count());
+            Assert.AreEqual(0, appCache.Accessor.GetAllIdTokens().Count());
+            Assert.AreEqual(0, appCache.Accessor.GetAllAccounts().Count());
 
             Assert.IsNull(appCache.LegacyPersistence.LoadCache());
 
@@ -88,8 +89,8 @@ namespace Microsoft.Identity.Test.Unit.Integration
             confidentialClient = ConfidentialClientApplicationBuilder
                                  .Create(ClientId).WithAuthority(new Uri(Authority), true).WithRedirectUri(RedirectUri)
                                  .WithClientSecret("wrong_password").BuildConcrete();
-            confidentialClient.AppTokenCacheInternal.Deserialize(appCache.Serialize());
-            confidentialClient.UserTokenCacheInternal.Deserialize(userCache.Serialize());
+            confidentialClient.AppTokenCacheInternal.DeserializeMsalV3(appCache.SerializeMsalV3());
+            confidentialClient.UserTokenCacheInternal.DeserializeMsalV3(userCache.SerializeMsalV3());
 
             res = await confidentialClient.AcquireTokenForClientAsync(MsalScopes).ConfigureAwait(false);
 

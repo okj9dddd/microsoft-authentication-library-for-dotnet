@@ -26,6 +26,7 @@
 //------------------------------------------------------------------------------
 
 using System;
+using System.Globalization;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client.Cache;
@@ -112,7 +113,7 @@ namespace Microsoft.Identity.Client.Platforms.netcore
         /// <returns>Name of the calling application</returns>
         protected override string InternalGetCallingApplicationName()
         {
-            return Assembly.GetEntryAssembly()?.GetName()?.Name?.ToString();
+            return Assembly.GetEntryAssembly()?.GetName()?.Name?.ToString(CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -146,5 +147,7 @@ namespace Microsoft.Identity.Client.Platforms.netcore
         protected override IWebUIFactory CreateWebUiFactory() => new WebUIFactory();
         protected override ICryptographyManager InternalGetCryptographyManager() => new NetCoreCryptographyManager();
         protected override IPlatformLogger InternalGetPlatformLogger() => new EventSourcePlatformLogger();
+
+        protected override IFeatureFlags CreateFeatureFlags() => new NetCoreFeatureFlags();
     }
 }

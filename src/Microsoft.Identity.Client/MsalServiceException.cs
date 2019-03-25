@@ -28,6 +28,8 @@
 using System;
 using System.Globalization;
 using System.Net.Http.Headers;
+using Microsoft.Identity.Client.Utils;
+using Microsoft.Identity.Json.Linq;
 
 namespace Microsoft.Identity.Client
 {
@@ -222,35 +224,6 @@ namespace Microsoft.Identity.Client
         public HttpResponseHeaders Headers { get; internal set; }
 
         /// <summary>
-        /// A string that provides more details about the error. Common sub errors are:
-        /// <list type="bullet">
-        /// <item>
-        /// <term>message_only</term>
-        /// <description>
-        /// User will be shown an informational message with no immediate remediation steps.
-        /// For example, access was blocked due to location or the device is not domain joined
-        /// </description>
-        /// </item>
-        /// <item>
-        /// <term>additional_action</term>
-        /// <description>
-        /// This indicates additional action is required that is in the user control, 
-        /// but is outside of the sign in session .For example, enroll in MDM or
-        /// install an app that uses Intune app protection.
-        /// </description>
-        /// </item>
-        /// <item>
-        /// <term>basic_action</term>
-        /// <description>
-        /// This indicates a simple action is required by the end user, like MFA.
-        /// Custom controls fall into this category..
-        /// </description>
-        /// </item>
-        /// </list>
-        /// </summary>
-        public string SubError { get; internal set; }
-
-        /// <summary>
         /// An ID that can used to piece up a single authentication flow.
         /// </summary>
         public string CorrelationId { get; internal set; }
@@ -267,6 +240,28 @@ namespace Microsoft.Identity.Client
                 StatusCode, 
                 ResponseBody, 
                 Headers);
+        }
+
+        private const string ClaimsKey = "claims";
+        private const string ResponseBodyKey = "response_body";
+        private const string CorrelationIdKey = "correlation_id";
+
+        internal override void PopulateJson(JObject jobj)
+        {
+            base.PopulateJson(jobj);
+
+            jobj[ClaimsKey] = Claims;
+            jobj[ResponseBodyKey] = ResponseBody;
+            jobj[CorrelationIdKey] = CorrelationId;
+        }
+
+        internal override void PopulateObjectFromJson(JObject jobj)
+        {
+            base.PopulateObjectFromJson(jobj);
+
+            Claims = JsonUtils.GetExistingOrEmptyString(jobj, ClaimsKey);
+            ResponseBody = JsonUtils.GetExistingOrEmptyString(jobj, ResponseBodyKey);
+            CorrelationId = JsonUtils.GetExistingOrEmptyString(jobj, CorrelationIdKey);
         }
     }
 }

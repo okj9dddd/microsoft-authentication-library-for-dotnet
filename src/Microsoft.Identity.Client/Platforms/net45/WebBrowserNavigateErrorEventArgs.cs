@@ -25,61 +25,40 @@
 //
 //------------------------------------------------------------------------------
 
-using System;
 using System.ComponentModel;
 
 namespace Microsoft.Identity.Client.Platforms.net45
 {
     /// <summary>
     /// </summary>
-    [Obsolete("This type should not be used and will be made internal.")]
     public class WebBrowserNavigateErrorEventArgs : CancelEventArgs
     {
-        private readonly int statusCode;
-        // Fields
-        private readonly string targetFrameName;
-        private readonly string url;
-        private readonly object webBrowserActiveXInstance;
-        // Methods
         /// <summary>
         /// </summary>
         public WebBrowserNavigateErrorEventArgs(string url, string targetFrameName, int statusCode,
             object webBrowserActiveXInstance)
         {
-            this.url = url;
-            this.targetFrameName = targetFrameName;
-            this.statusCode = statusCode;
-            this.webBrowserActiveXInstance = webBrowserActiveXInstance;
+            Url = url;
+            TargetFrameName = targetFrameName;
+            StatusCode = statusCode;
+            WebBrowserActiveXInstance = webBrowserActiveXInstance;
         }
 
-        // Properties
         /// <summary>
         /// </summary>
-        public string TargetFrameName
-        {
-            get { return targetFrameName; }
-        }
+        public string TargetFrameName { get; }
 
         // url as a string, as in case of error it could be invalid url
         /// <summary>
         /// </summary>
-        public string Url
-        {
-            get { return url; }
-        }
-        
-        /// <summary>
-        /// </summary>
-        public int StatusCode
-        {
-            get { return statusCode; }
-        }
+        public string Url {get;}
 
         /// <summary>
         /// </summary>
-        public object WebBrowserActiveXInstance
-        {
-            get { return webBrowserActiveXInstance; }
-        }
+        public object WebBrowserActiveXInstance {get;}
+
+        /// <summary>
+        /// </summary>
+        public int StatusCode { get; }
     }
 }
