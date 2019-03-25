@@ -49,7 +49,7 @@ namespace Microsoft.Identity.Test.LabInfrastructure
         public const string True = "true";
         public const string False = "false";
 
-        public const string BetaEndpoint = "http://api.msidlab.com/api/userbeta";
-        public const string LabEndpoint = "http://api.msidlab.com/api/user";
+        public const string LabBetaEndpoint = "http://api.msidlab.com/api/userbeta";
+        public const string LabProdEndpoint = "http://api.msidlab.com/api/user";
     }
 }

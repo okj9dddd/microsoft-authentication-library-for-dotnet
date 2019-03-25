@@ -149,9 +149,9 @@ namespace Microsoft.Identity.Test.Unit.AppConfigTests
         [TestMethod]
         public void TestConstructor_WithHttpClientFactory()
         {
-            var httpClientFactory = new MyHttpClientFactory();
+            IMsalHttpClientFactory httpClientFactory = new MyHttpClientFactory();
             var pca = PublicClientApplicationBuilder.Create(MsalTestConstants.ClientId)
-                                                    .WithHttpClientFactory(httpClientFactory)
+                                                    .WithAuthority(AzureCloudInstance.AzureGermany, AadAuthorityAudience.AzureAdAndPersonalMicrosoftAccount)
                                                     .Build();
             Assert.AreEqual(httpClientFactory, pca.AppConfig.HttpClientFactory);
         }

@@ -26,6 +26,7 @@
 //------------------------------------------------------------------------------
 
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Microsoft.Identity.Test.LabInfrastructure
 {
@@ -34,7 +35,36 @@ namespace Microsoft.Identity.Test.LabInfrastructure
         [JsonProperty("AppId")]
         public string AppId { get; set; }
 
+        [JsonProperty("B2CAuthorities")]
+        public IList<B2CAuthority> B2CAuthoritities { get; set; }
+
+        [JsonProperty("Authority")]
+        public IList<string> Authority { get; set; }
+
+        [JsonProperty("Scope")]
+        public IList<string> Scopes { get; set; }
+
         [JsonProperty("Users")]
         public LabUser User { get; set; }
+
+        [JsonProperty("RedirectUri")]
+        public IList<string> RedirectUris { get; set; }
+    }
+
+    public class B2CAuthority
+    {
+        [JsonProperty("Authority")]
+        public string Authority { get; set; }
+
+        [JsonProperty("AuthorityType")]
+        public B2CPolicy Policy { get; set; }
+    }
+
+    public enum B2CPolicy
+    {
+        SISOPolicy,
+        SignInPolicy,
+        SignUpPolicy,
+        ProfileEditPolicy,
     }
 }

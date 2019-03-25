@@ -156,6 +156,57 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
             await RunTestForUserAsync(labResponse).ConfigureAwait(false);
         }
 
+        [TestMethod]
+        public async Task TempAsync()
+        {
+            // Arrange
+            LabResponse labResponse = LabUserHelper.GetB2CGoogleAccount();
+
+            await RunTestForUser2Async(labResponse).ConfigureAwait(false);
+        }
+
+        private async Task RunTestForUser2Async(LabResponse labResponse)
+        {
+            string b2cAuthority = labResponse.B2CAuthoritities.Single(a => a.Policy == B2CPolicy.SISOPolicy).Authority;
+
+            PublicClientApplication pca = PublicClientApplicationBuilder.Create(labResponse.AppId) //TODO: bug in the lab - have to hardcode clientid
+                                                                        .WithRedirectUri(SeleniumWebUI.FindFreeLocalhostRedirectUri())
+//.WithB2CAuthority("https://msidlabb2c.b2clogin.com/tfp/msidlabb2c.onmicrosoft.com/B2C_1_SISOPolicy/")
+.WithB2CAuthority(b2cAuthority)
+.BuildConcrete();
+
+            string[] scopes = labResponse.Scopes.ToArray();
+        
+            Trace.WriteLine("Part 1 - Acquire a token interactively, no login hint");
+            AuthenticationResult result = await pca
+                .AcquireTokenInteractive(scopes
+                //new[] {
+                //    "https://msidlabb2c.onmicrosoft.com/msidlabb2capi/read" }
+                //    "https://msidlabb2c.onmicrosoft.com/msidlabb2capi/user_impersonation" }
+                , null)
+                .WithCustomWebUi(CreateSeleniumCustomWebUI(labResponse.User, false))
+                .ExecuteAsync(new CancellationTokenSource(_interactiveAuthTimeout).Token)
+                .ConfigureAwait(false);
+            IAccount account = await MsalAssert.AssertSingleAccountAsync(labResponse, pca, result).ConfigureAwait(false);
+
+            //Trace.WriteLine("Part 2 - Clear the cache");
+            //await pca.RemoveAsync(account).ConfigureAwait(false);
+            //Assert.IsFalse((await pca.GetAccountsAsync().ConfigureAwait(false)).Any());
+
+            //Trace.WriteLine("Part 3 - Acquire a token interactively again, with login hint");
+            //result = await pca
+            //    .AcquireTokenInteractive(_scopes, null)
+            //    .WithCustomWebUi(CreateSeleniumCustomWebUI(labResponse.User, true))
+            //    .WithLoginHint(labResponse.User.HomeUPN)
+            //    .ExecuteAsync(new CancellationTokenSource(_interactiveAuthTimeout).Token)
+            //    .ConfigureAwait(false);
+            //account = await AssertSingleAccountAsync(labResponse, pca, result).ConfigureAwait(false);
+
+            //Trace.WriteLine("Part 4 - Acquire a token silently");
+            //result = await pca.AcquireTokenSilentAsync(_scopes, account).ConfigureAwait(false);
+            //await AssertSingleAccountAsync(labResponse, pca, result).ConfigureAwait(false);
+        }
+
         private async Task RunTestForUserAsync(LabResponse labResponse)
         {
             PublicClientApplication pca = PublicClientApplicationBuilder.Create(labResponse.AppId)
@@ -195,6 +246,6 @@ namespace Microsoft.Identity.Test.Integration.SeleniumTests
                 Trace.WriteLine("Starting Selenium automation");
                 driver.PerformLogin(user, withLoginHint);
             });
-        }    
+        }
     }
 }

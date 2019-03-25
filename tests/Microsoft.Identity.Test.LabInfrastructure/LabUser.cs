@@ -33,8 +33,6 @@ namespace Microsoft.Identity.Test.LabInfrastructure
 {
     public class LabUser
     {
-        public LabUser() { }
-
         [JsonProperty("objectId")]
         public Guid ObjectId { get; set; }
 

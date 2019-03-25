@@ -48,7 +48,7 @@ namespace Microsoft.Identity.Test.LabInfrastructure
         private LabResponse GetLabResponseFromApi(UserQuery query)
         {
             //Fetch user
-            string result = CreateLabQuery(query);
+            string result = RunQuery(query);
 
             if (string.IsNullOrWhiteSpace(result))
             {
@@ -69,11 +69,11 @@ namespace Microsoft.Identity.Test.LabInfrastructure
             return response;
         }
 
-        private string CreateLabQuery(UserQuery query)
+        private string RunQuery(UserQuery query)
         {
             HttpClient webClient = new HttpClient();
             IDictionary<string, string> queryDict = new Dictionary<string, string>();
-            UriBuilder uriBuilder = new UriBuilder(LabApiConstants.LabEndpoint);
+            UriBuilder uriBuilder = new UriBuilder(LabApiConstants.LabBetaEndpoint);
 
             //Disabled for now until there are tests that use it.
             queryDict.Add(LabApiConstants.MobileAppManagementWithConditionalAccess, LabApiConstants.False);
