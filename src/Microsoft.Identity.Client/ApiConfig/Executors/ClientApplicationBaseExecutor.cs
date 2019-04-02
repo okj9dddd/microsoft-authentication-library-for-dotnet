@@ -30,12 +30,12 @@ namespace Microsoft.Identity.Client.ApiConfig.Executors
         {
             LogVersionInfo();
 
-            IAccount account = GetAccountFromParamsOrLoginHint(silentParameters);
+            IAccount account = await GetAccountFromParamsOrLoginHintAsync(silentParameters).ConfigureAwait(false);
 
             var customAuthority = commonParameters.AuthorityOverride == null
                                       ? _clientApplicationBase.GetAuthority(account)
                                       : Instance.Authority.CreateAuthorityWithOverride(
-                                          ServiceBundle, 
+                                          ServiceBundle,
                                           commonParameters.AuthorityOverride);
 
             var requestParameters = _clientApplicationBase.CreateRequestParameters(commonParameters, _clientApplicationBase.UserTokenCacheInternal, customAuthority);
@@ -71,9 +71,9 @@ namespace Microsoft.Identity.Client.ApiConfig.Executors
             return await handler.RunAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
-        private IAccount GetSingleAccountForLoginHint(string loginHint)
+        private async Task<IAccount> GetSingleAccountForLoginHintAsync(string loginHint)
         {
-            var accounts = _clientApplicationBase.UserTokenCacheInternal.GetAccounts(_clientApplicationBase.Authority)
+            var accounts = (await _clientApplicationBase.UserTokenCacheInternal.GetAccountsAsync(_clientApplicationBase.Authority).ConfigureAwait(false))
                 .Where(
                     a => !string.IsNullOrWhiteSpace(a.Username) &&
                     a.Username.Equals(loginHint, StringComparison.OrdinalIgnoreCase))
@@ -97,14 +97,14 @@ namespace Microsoft.Identity.Client.ApiConfig.Executors
         }
 
 
-        private IAccount GetAccountFromParamsOrLoginHint(AcquireTokenSilentParameters silentParameters)
+        private async Task<IAccount> GetAccountFromParamsOrLoginHintAsync(AcquireTokenSilentParameters silentParameters)
         {
             if (silentParameters.Account != null)
             {
                 return silentParameters.Account;
             }
 
-            return GetSingleAccountForLoginHint(silentParameters.LoginHint);
+            return await GetSingleAccountForLoginHintAsync(silentParameters.LoginHint).ConfigureAwait(false);
         }
     }
 }

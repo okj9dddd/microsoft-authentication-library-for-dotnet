@@ -32,6 +32,7 @@ using System.Linq;
 using Microsoft.Identity.Client.Cache.Items;
 using Microsoft.Identity.Client.Core;
 using Microsoft.Identity.Client.Exceptions;
+using Microsoft.Identity.Client.Instance;
 using Microsoft.Identity.Client.Internal;
 using Microsoft.Identity.Client.Utils;
 
@@ -39,9 +40,9 @@ namespace Microsoft.Identity.Client.Cache
 {
     internal static class CacheFallbackOperations
     {
-        internal /* internal for testing only */ const string DifferentEnvError = 
+        internal /* internal for testing only */ const string DifferentEnvError =
             "Not expecting the RT and IdT to have different env when adding to legacy cache";
-        internal /* internal for testing only */ const string DifferentAuthorityError = 
+        internal /* internal for testing only */ const string DifferentAuthorityError =
             "Not expecting authority to have a different env than the RT and IdT";
 
         public static void WriteAdalRefreshToken(
@@ -118,10 +119,12 @@ namespace Microsoft.Identity.Client.Cache
         /// Item1 is a map of ClientInfo -> AdalUserInfo for those users that have ClientInfo 
         /// Item2 is a list of AdalUserInfo for those users that do not have ClientInfo
         /// </summary>
+        /// <remarks>Users are not filetered by enviroment</remarks>
         public static AdalUsersForMsalResult GetAllAdalUsersForMsal(
             ICoreLogger logger,
-            ILegacyCachePersistence legacyCachePersistence, 
-            string clientId)
+            ILegacyCachePersistence legacyCachePersistence,
+            string clientId,
+            string enviroment)
         {
             var clientInfoToAdalUserMap = new Dictionary<string, AdalUserInfo>();
             var adalUsersWithoutClientInfo = new List<AdalUserInfo>();
@@ -131,9 +134,9 @@ namespace Microsoft.Identity.Client.Cache
                     AdalCacheOperations.Deserialize(logger, legacyCachePersistence.LoadCache());
                 // filter by client id and environment first
                 // TODO - authority check needs to be updated for alias check
-                List<KeyValuePair<AdalTokenCacheKey, AdalResultWrapper>> listToProcess =
-                    dictionary.Where(p =>
-                        p.Key.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase)).ToList();
+                var listToProcess = dictionary.Where(p =>
+                        p.Key.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase) &&
+                        Authority.GetEnviroment(p.Key.Authority).Equals(enviroment, StringComparison.OrdinalIgnoreCase));                        
 
                 foreach (KeyValuePair<AdalTokenCacheKey, AdalResultWrapper> pair in listToProcess)
                 {
@@ -267,10 +270,10 @@ namespace Microsoft.Identity.Client.Cache
         public static List<MsalRefreshTokenCacheItem> GetAllAdalEntriesForMsal(
             ICoreLogger logger,
             ILegacyCachePersistence legacyCachePersistence,
-            ISet<string> environmentAliases, 
-            string clientId, 
-            string upn, 
-            string uniqueId, 
+            ISet<string> environmentAliases,
+            string clientId,
+            string upn,
+            string uniqueId,
             string rawClientInfo)
         {
             try
@@ -338,11 +341,11 @@ namespace Microsoft.Identity.Client.Cache
         public static MsalRefreshTokenCacheItem GetAdalEntryForMsal(
             ICoreLogger logger,
             ILegacyCachePersistence legacyCachePersistence,
-            string preferredEnvironment, 
-            ISet<string> environmentAliases, 
-            string clientId, 
-            string upn, 
-            string uniqueId, 
+            string preferredEnvironment,
+            ISet<string> environmentAliases,
+            string clientId,
+            string upn,
+            string uniqueId,
             string rawClientInfo)
         {
             var adalRts = GetAllAdalEntriesForMsal(logger, legacyCachePersistence, environmentAliases, clientId, upn, uniqueId, rawClientInfo);

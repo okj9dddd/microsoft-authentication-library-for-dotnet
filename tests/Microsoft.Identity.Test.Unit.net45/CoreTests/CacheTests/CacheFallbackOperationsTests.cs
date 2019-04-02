@@ -28,16 +28,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Identity.Client.Core;
-using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Cache;
 using Microsoft.Identity.Client.Cache.Items;
-using Microsoft.Identity.Client.Internal;
-using Microsoft.Identity.Test.Common.Core.Helpers;
+using Microsoft.Identity.Client.Core;
+using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Test.Common.Core.Mocks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSubstitute;
-using Microsoft.Identity.Client.Exceptions;
 
 namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
 {
@@ -69,7 +66,8 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 CacheFallbackOperations.GetAllAdalUsersForMsal(
                     _logger,
                     _legacyCachePersistence,
-                    MsalTestConstants.ClientId);
+                    MsalTestConstants.ClientId,
+                    MsalTestConstants.ProductionPrefNetworkEnvironment);
 
             AssertByUsername(
                 adalUsers,
@@ -77,7 +75,6 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 {
                     "user1",
                     "user2",
-                    "sovereign_user5"  // this user has different environment but same client id
                 },
                 new[]
                 {
@@ -89,7 +86,8 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
             adalUsers = CacheFallbackOperations.GetAllAdalUsersForMsal(
                 _logger,
                 _legacyCachePersistence,
-                "other_client_id");
+                "other_client_id",
+                MsalTestConstants.SovereignEnvironment);
 
             // Assert
             AssertByUsername(
@@ -136,14 +134,14 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 CacheFallbackOperations.GetAllAdalUsersForMsal(
                     _logger,
                     _legacyCachePersistence,
-                    MsalTestConstants.ClientId);
+                    MsalTestConstants.ClientId,
+                    MsalTestConstants.ProductionPrefNetworkEnvironment);
 
             AssertByUsername(
                 adalUsers,
                 new[]
                 {
                     "user2",
-                    "sovereign_user5"  // this user has different environment but same client id
                 },
                 new[]
                 {
@@ -180,7 +178,8 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 CacheFallbackOperations.GetAllAdalUsersForMsal(
                     _logger,
                     _legacyCachePersistence,
-                    MsalTestConstants.ClientId);
+                    MsalTestConstants.ClientId,
+                    MsalTestConstants.ProductionPrefNetworkEnvironment);
 
             AssertByUsername(
                 adalUsers,
@@ -188,11 +187,9 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 {
                     "user2",
                     "user1",
-                    "sovereign_user5"  // this user has different environment but same client id
                 },
                 new[]
                 {
-                    "no_client_info_user3",
                     "no_client_info_user3",
                     "no_client_info_user4"
                 });
@@ -211,7 +208,8 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
             adalUsers = CacheFallbackOperations.GetAllAdalUsersForMsal(
                 _logger,
                 _legacyCachePersistence,
-                MsalTestConstants.ClientId);
+                MsalTestConstants.ClientId ,
+                MsalTestConstants.ProductionPrefNetworkEnvironment);
 
             AssertByUsername(
                 adalUsers,
@@ -219,7 +217,6 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 {
                     "user2",
                     "user1",
-                    "sovereign_user5"  // this user has different environment but same client id
                 },
                 new[]
                 {

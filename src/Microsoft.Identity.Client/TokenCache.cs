@@ -31,6 +31,7 @@ using Microsoft.Identity.Client.Cache.Keys;
 using Microsoft.Identity.Client.Core;
 using Microsoft.Identity.Client.Exceptions;
 using Microsoft.Identity.Client.Instance;
+using Microsoft.Identity.Client.Internal;
 using Microsoft.Identity.Client.Internal.Requests;
 using Microsoft.Identity.Client.OAuth2;
 using Microsoft.Identity.Client.PlatformsCommon.Factories;
@@ -58,7 +59,7 @@ namespace Microsoft.Identity.Client
 #pragma warning restore CS1574 // XML comment has cref attribute that could not be resolved
     {
         internal const string NullPreferredUsernameDisplayLabel = "Missing from the token response";
-        private const string MicrosoftLogin = "login.microsoftonline.com";
+        private const string AzurePublicEnv = "login.microsoftonline.com";
 
         private ICoreLogger _logger => ServiceBundle.DefaultLogger;
 
@@ -89,7 +90,7 @@ namespace Microsoft.Identity.Client
         {
         }
 
-        internal TokenCache(IServiceBundle serviceBundle) 
+        internal TokenCache(IServiceBundle serviceBundle)
         {
             var proxy = serviceBundle?.PlatformProxy ?? PlatformProxyFactory.CreatePlatformProxy(null);
             _accessor = proxy.CreateTokenCacheAccessor();
@@ -275,40 +276,40 @@ namespace Microsoft.Identity.Client
 
                         _accessor.SaveAccessToken(msalAccessTokenCacheItem);
 
-                    if (idToken != null)
-                    {
-                        _accessor.SaveIdToken(msalIdTokenCacheItem);
-                        var msalAccountCacheItem = new MsalAccountCacheItem(preferredEnvironmentHost, response, preferredUsername, tenantId);
-                        _accessor.SaveAccount(msalAccountCacheItem);
-                    }
-
-                    // if server returns the refresh token back, save it in the cache.
-                    if (response.RefreshToken != null)
-                    {
-                        msalRefreshTokenCacheItem = new MsalRefreshTokenCacheItem(preferredEnvironmentHost, requestParams.ClientId, response);
-                        if (!_featureFlags.IsFociEnabled)
+                        if (idToken != null)
                         {
-                            msalRefreshTokenCacheItem.FamilyId = null;
+                            _accessor.SaveIdToken(msalIdTokenCacheItem);
+                            var msalAccountCacheItem = new MsalAccountCacheItem(preferredEnvironmentHost, response, preferredUsername, tenantId);
+                            _accessor.SaveAccount(msalAccountCacheItem);
                         }
 
-                        requestParams.RequestContext.Logger.Info("Saving RT in cache...");
-                        _accessor.SaveRefreshToken(msalRefreshTokenCacheItem);
-                    }
+                        // if server returns the refresh token back, save it in the cache.
+                        if (response.RefreshToken != null)
+                        {
+                            msalRefreshTokenCacheItem = new MsalRefreshTokenCacheItem(preferredEnvironmentHost, requestParams.ClientId, response);
+                            if (!_featureFlags.IsFociEnabled)
+                            {
+                                msalRefreshTokenCacheItem.FamilyId = null;
+                            }
 
-                    UpdateAppMetadata(requestParams.ClientId, preferredEnvironmentHost, response.FamilyId);
+                            requestParams.RequestContext.Logger.Info("Saving RT in cache...");
+                            _accessor.SaveRefreshToken(msalRefreshTokenCacheItem);
+                        }
 
-                    // save RT in ADAL cache for public clients
-                    // do not save RT in ADAL cache for MSAL B2C scenarios
-                    if (!requestParams.IsClientCredentialRequest && !requestParams.AuthorityInfo.AuthorityType.Equals(AuthorityType.B2C))
-                    {
-                        CacheFallbackOperations.WriteAdalRefreshToken(
-                            _logger,
-                            LegacyCachePersistence,
-                            msalRefreshTokenCacheItem,
-                            msalIdTokenCacheItem,
-                            Authority.CreateAuthorityUriWithHost(requestParams.TenantUpdatedCanonicalAuthority, preferredEnvironmentHost),
-                            msalIdTokenCacheItem.IdToken.ObjectId, response.Scope);
-                    }
+                        UpdateAppMetadata(requestParams.ClientId, preferredEnvironmentHost, response.FamilyId);
+
+                        // save RT in ADAL cache for public clients
+                        // do not save RT in ADAL cache for MSAL B2C scenarios
+                        if (!requestParams.IsClientCredentialRequest && !requestParams.AuthorityInfo.AuthorityType.Equals(AuthorityType.B2C))
+                        {
+                            CacheFallbackOperations.WriteAdalRefreshToken(
+                                _logger,
+                                LegacyCachePersistence,
+                                msalRefreshTokenCacheItem,
+                                msalIdTokenCacheItem,
+                                Authority.CreateAuthorityUriWithHost(requestParams.TenantUpdatedCanonicalAuthority, preferredEnvironmentHost),
+                                msalIdTokenCacheItem.IdToken.ObjectId, response.Scope);
+                        }
 
                     }
                     finally
@@ -738,7 +739,7 @@ namespace Microsoft.Identity.Client
             Uri authorityHost = new Uri(authority);
             var authorityType = Authority.GetAuthorityType(authority);
             if (authorityType == AuthorityType.Aad ||
-                authorityHost.Host.Equals(MicrosoftLogin, StringComparison.OrdinalIgnoreCase))
+                authorityHost.Host.Equals(AzurePublicEnv, StringComparison.OrdinalIgnoreCase))
             {
                 var instanceDiscoveryMetadata = await ServiceBundle.AadInstanceDiscovery.GetMetadataEntryAsync(
                     new Uri(authority),
@@ -795,77 +796,151 @@ namespace Microsoft.Identity.Client
             return preferredEnvironmentHost;
         }
 
-        IEnumerable<IAccount> ITokenCacheInternal.GetAccounts(string authority)
+        async Task<IEnumerable<IAccount>> ITokenCacheInternal.GetAccountsAsync(string authority)
         {
-            var environment = new Uri(authority).Host;
+            var environment = Authority.GetEnviroment(authority);
+
+            FetchAllAccountItemsFromCache(
+                environment,
+                out IEnumerable<MsalRefreshTokenCacheItem> rtCacheItems,
+                out IEnumerable<MsalAccountCacheItem> accountCacheItems,
+                out AdalUsersForMsalResult adalUsersResult);
+
+            // Multi-cloud support - must filter by env, namely by preferred_cache_env
+            var cacheEnv = await GetPreferedCacheEnvAvoidNetworkCallAsync(authority, accountCacheItems).ConfigureAwait(false);
+            rtCacheItems = rtCacheItems.Where(rt => rt.Environment.Equals(cacheEnv, StringComparison.OrdinalIgnoreCase));
+            accountCacheItems = accountCacheItems.Where(a => a.Environment.Equals(cacheEnv, StringComparison.OrdinalIgnoreCase));
+
+            IDictionary<string, Account> clientInfoToAccountMap = new Dictionary<string, Account>();
+            foreach (MsalRefreshTokenCacheItem rtItem in rtCacheItems)
+            {
+                foreach (MsalAccountCacheItem account in accountCacheItems)
+                {
+                    if (rtItem.HomeAccountId.Equals(account.HomeAccountId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        clientInfoToAccountMap[rtItem.HomeAccountId] = new Account(
+                            account.HomeAccountId,
+                            account.PreferredUsername,
+                            environment);  // Preserve the env passed in by the user
+
+                        break;
+                    }
+                }
+            }
+
+            List<IAccount> accounts = UpdateWithAdalAccounts(environment, adalUsersResult, clientInfoToAccountMap);
+            return accounts;
+        }
+
+        private void FetchAllAccountItemsFromCache(
+            string environment,
+            out IEnumerable<MsalRefreshTokenCacheItem> tokenCacheItems,
+            out IEnumerable<MsalAccountCacheItem> accountCacheItems,
+            out AdalUsersForMsalResult adalUsersResult)
+        {
             lock (LockObject)
             {
-                TokenCacheNotificationArgs args = new TokenCacheNotificationArgs
+                var args = new TokenCacheNotificationArgs
                 {
                     TokenCache = this,
                     ClientId = ClientId,
                     Account = null
                 };
 
-                IEnumerable<MsalRefreshTokenCacheItem> tokenCacheItems;
-                IEnumerable<MsalAccountCacheItem> accountCacheItems;
-                AdalUsersForMsalResult adalUsersResult;
-
                 OnBeforeAccess(args);
                 try
                 {
                     tokenCacheItems = ((ITokenCacheInternal)this).GetAllRefreshTokens(false);
                     accountCacheItems = ((ITokenCacheInternal)this).GetAllAccounts();
-                    adalUsersResult = CacheFallbackOperations.GetAllAdalUsersForMsal(_logger, LegacyCachePersistence, ClientId);
+
+                    // Known Issue: will ignore env aliases, which we cannot get without an instance discovery
+                    adalUsersResult = CacheFallbackOperations.GetAllAdalUsersForMsal(
+                        _logger,
+                        LegacyCachePersistence,
+                        ClientId,
+                        environment);
                 }
                 finally
                 {
                     OnAfterAccess(args);
                 }
-
-                IDictionary<string, Account> clientInfoToAccountMap = new Dictionary<string, Account>();
-                foreach (MsalRefreshTokenCacheItem rtItem in tokenCacheItems)
-                {
-                    foreach (MsalAccountCacheItem account in accountCacheItems)
-                    {
-                        if (rtItem.HomeAccountId.Equals(account.HomeAccountId, StringComparison.OrdinalIgnoreCase))
-                        {
-                            clientInfoToAccountMap[rtItem.HomeAccountId] = new Account
-                                (account.HomeAccountId, account.PreferredUsername, environment);
-                            break;
-                        }
-                    }
-                }
-
-                Dictionary<string, AdalUserInfo> clientInfoToAdalUserMap = adalUsersResult.ClientInfoUsers;
-                List<AdalUserInfo> adalUsersWithoutClientInfo = adalUsersResult.UsersWithoutClientInfo;
-
-                foreach (KeyValuePair<string, AdalUserInfo> pair in clientInfoToAdalUserMap)
-                {
-                    ClientInfo clientInfo = ClientInfo.CreateFromJson(pair.Key);
-                    string accountIdentifier = clientInfo.ToAccountIdentifier();
-
-                    if (!clientInfoToAccountMap.ContainsKey(accountIdentifier))
-                    {
-                        clientInfoToAccountMap[accountIdentifier] = new Account(
-                             accountIdentifier, pair.Value.DisplayableId, environment);
-                    }
-                }
-
-                var accounts = new List<IAccount>(clientInfoToAccountMap.Values);
-                var uniqueUserNames = clientInfoToAccountMap.Values.Select(o => o.Username).Distinct().ToList();
-
-                foreach (AdalUserInfo user in adalUsersWithoutClientInfo)
-                {
-                    if (!string.IsNullOrEmpty(user.DisplayableId) && !uniqueUserNames.Contains(user.DisplayableId))
-                    {
-                        accounts.Add(new Account(null, user.DisplayableId, environment));
-                        uniqueUserNames.Add(user.DisplayableId);
-                    }
-                }
-                return accounts.AsEnumerable();
             }
         }
+
+        private async Task<string> GetPreferedCacheEnvAvoidNetworkCallAsync(
+            string authority,
+            IEnumerable<MsalAccountCacheItem> accountCacheItems)
+        {
+            // this map is to try to avoid a network call when getting accounts and it is ok if it is not up to date
+            // but it should not be used in any other scenario
+            IDictionary<string, string> envToPreferredCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { AzurePublicEnv, "login.windows.net" },
+                { "login.partner.microsoftonline.cn", "login.partner.microsoftonline.cn" },
+                { "login.microsoftonline.de", "login.microsoftonline.de" },
+                { "login.microsoftonline.us", "login.microsoftonline.us" },
+                { "login-us.microsoftonline.com", "login-us.microsoftonline.com" },
+            };
+
+            var envFromRequest = Authority.GetEnviroment(authority);
+
+            // Avoid a network call if all accounts are from the same network (no aliases!)
+            bool canAvoidInstanceDiscovery =
+                 envToPreferredCache.ContainsKey(envFromRequest) &&
+                 accountCacheItems.All(env => env.Environment.Equals(
+                     envToPreferredCache[envFromRequest],
+                     StringComparison.OrdinalIgnoreCase));
+
+            if (canAvoidInstanceDiscovery)
+            {
+                return await Task.FromResult(envToPreferredCache[envFromRequest]).ConfigureAwait(false);
+            }
+
+            var requestContext = new RequestContext(
+                ServiceBundle.Config.ClientId,
+                MsalLogger.Create(Guid.NewGuid(), ServiceBundle.Config));
+
+            var instanceDiscoveryResult = await GetCachedOrDiscoverAuthorityMetaDataAsync(authority, requestContext)
+                .ConfigureAwait(false);
+
+            return instanceDiscoveryResult?.PreferredCache ?? envFromRequest;
+        }
+
+        private static List<IAccount> UpdateWithAdalAccounts(string envFromRequest, AdalUsersForMsalResult adalUsersResult, IDictionary<string, Account> clientInfoToAccountMap)
+        {
+            var accounts = new List<IAccount>();
+
+            Dictionary<string, AdalUserInfo> clientInfoToAdalUserMap = adalUsersResult.ClientInfoUsers;
+            List<AdalUserInfo> adalUsersWithoutClientInfo = adalUsersResult.UsersWithoutClientInfo;
+
+            foreach (KeyValuePair<string, AdalUserInfo> pair in clientInfoToAdalUserMap)
+            {
+                ClientInfo clientInfo = ClientInfo.CreateFromJson(pair.Key);
+                string accountIdentifier = clientInfo.ToAccountIdentifier();
+
+                if (!clientInfoToAccountMap.ContainsKey(accountIdentifier))
+                {
+                    clientInfoToAccountMap[accountIdentifier] = new Account(
+                            accountIdentifier, pair.Value.DisplayableId, envFromRequest);
+                }
+            }
+
+            accounts.AddRange(clientInfoToAccountMap.Values);
+            var uniqueUserNames = clientInfoToAccountMap.Values.Select(o => o.Username).Distinct().ToList();
+
+            foreach (AdalUserInfo user in adalUsersWithoutClientInfo)
+            {
+                if (!string.IsNullOrEmpty(user.DisplayableId) && !uniqueUserNames.Contains(user.DisplayableId))
+                {
+                    accounts.Add(new Account(null, user.DisplayableId, envFromRequest));
+                    uniqueUserNames.Add(user.DisplayableId);
+                }
+            }
+
+            return accounts;
+        }
+
+
 
         IEnumerable<MsalRefreshTokenCacheItem> ITokenCacheInternal.GetAllRefreshTokens(bool filterByClientId)
         {
@@ -918,7 +993,7 @@ namespace Microsoft.Identity.Client
 
                 try
                 {
-                    TokenCacheNotificationArgs args = new TokenCacheNotificationArgs
+                    var args = new TokenCacheNotificationArgs
                     {
                         TokenCache = this,
                         ClientId = ClientId,
@@ -992,7 +1067,7 @@ namespace Microsoft.Identity.Client
                                item.PreferredUsername.Equals(account.Username, StringComparison.OrdinalIgnoreCase))
                 .ToList()
                 .ForEach(accItem => _accessor.DeleteAccount(accItem.GetKey()));
-           
+
         }
 
         internal void RemoveAdalUser(IAccount account)
