@@ -43,7 +43,7 @@
     },
     "6eeda3a1-c3b9-4e92-a94d-965a50c06de7.72f988bf-86f1-41af-91ab-2d7cd011db47-login.windows.net-refreshtoken-0615b6ca-88d4-4884-8729-b178178f7c27--": {
       "home_account_id": "6eeda3a1-c3b9-4e92-a94d-965a50c06de7.72f988bf-86f1-41af-91ab-2d7cd011db47",
-      "environment": "login.windows.net",
+      "environment": "sts.windows.net",
       "client_info": "eyJ1aWQiOiI2ZWVkYTNhMS1jM2I5LTRlOTItYTk0ZC05NjVhNTBjMDZkZTciLCJ1dGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3In0",
       "client_id": "0615b6ca-88d4-4884-8729-b178178f7c27",
       "secret": "secret",
@@ -86,7 +86,7 @@
     },
     "6eeda3a1-c3b9-4e92-a94d-965a50c06de7.72f988bf-86f1-41af-91ab-2d7cd011db47-login.windows.net-72f988bf-86f1-41af-91ab-2d7cd011db47": {
       "home_account_id": "6eeda3a1-c3b9-4e92-a94d-965a50c06de7.72f988bf-86f1-41af-91ab-2d7cd011db47",
-      "environment": "login.windows.net",
+      "environment": "login.microsoft.com",
       "client_info": "eyJ1aWQiOiI2ZWVkYTNhMS1jM2I5LTRlOTItYTk0ZC05NjVhNTBjMDZkZTciLCJ1dGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3In0",
       "username": "user1@microsoft.com",
       "name": "Joe Blogs",

@@ -95,32 +95,6 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
             Assert.IsTrue(accounts.All(a => a.Environment == "login.microsoftonline.com"));
         }
 
-        [TestMethod]
-        [DeploymentItem(@"Resources\SingleCloudTokenCache.json")]
-        public async Task CallsToAliasesHitTheNetworkAsync()
-        {
-            using (var httpManager = new MockHttpManager())
-            {
-                // Arrange
-                httpManager.AddInstanceDiscoveryMockHandler(); // this needs to happen because we don't keep track of aliases
-
-                PublicClientApplication pca = PublicClientApplicationBuilder
-                    .Create(ClientIdInFile)
-                    .WithAuthority(MsalTestConstants.AuthorityCommonTenantNotPrefAlias)
-                    .WithHttpManager(httpManager)
-                    .BuildConcrete();
-
-                pca.InitializeTokenCacheFromFile(ResourceHelper.GetTestResourceRelativePath("SingleCloudTokenCache.json"));
-                pca.UserTokenCacheInternal.Accessor.AssertItemCount(2, 2, 2, 2, 1);
-
-                // Act
-                var accounts = await pca.GetAccountsAsync().ConfigureAwait(false);
-
-                // Assert
-                Assert.AreEqual(2, accounts.Count());
-                Assert.IsTrue(accounts.All(a => a.Environment == MsalTestConstants.ProductionNotPrefEnvironmentAlias));
-            }
-        }
 
         // Bug https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/issues/1030
         [TestMethod]

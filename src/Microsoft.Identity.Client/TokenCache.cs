@@ -807,6 +807,9 @@ namespace Microsoft.Identity.Client
             return preferredEnvironmentHost;
         }
 
+        /// <remarks>
+        /// Get accounts should not make a network call, if possible.
+        /// </remarks>
         async Task<IEnumerable<IAccount>> ITokenCacheInternal.GetAccountsAsync(string authority)
         {
             var environment = Authority.GetEnviroment(authority);
@@ -817,9 +820,8 @@ namespace Microsoft.Identity.Client
                 out IEnumerable<MsalAccountCacheItem> accountCacheItems,
                 out AdalUsersForMsalResult adalUsersResult);
 
-            // Multi-cloud support - must filter by env, use all env aliases to avoid
-            // filtering out too much (e.g. bad MSAL implementations that do not save using PreferredCacheEnv
-            // or the PreferredCacheImpl changing in the future)
+            // Multi-cloud support - must filter by env.
+            // Use all env aliases to filter, in case PreferredCacheEnv changes in the future
             var aliases = await GetEnvAliasesTryAvoidNetworkCallAsync(authority, accountCacheItems).ConfigureAwait(false);
 
             rtCacheItems = rtCacheItems.Where(rt => aliases.ContainsOrdinalIgnoreCase(rt.Environment));
