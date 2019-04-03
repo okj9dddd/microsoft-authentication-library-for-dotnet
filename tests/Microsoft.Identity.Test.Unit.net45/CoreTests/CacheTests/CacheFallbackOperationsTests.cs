@@ -87,7 +87,7 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
                 _logger,
                 _legacyCachePersistence,
                 "other_client_id",
-                MsalTestConstants.SovereignEnvironment);
+                MsalTestConstants.SovereignNetworkEnvironment);
 
             // Assert
             AssertByUsername(
@@ -399,7 +399,7 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
             PopulateLegacyWithRtAndId(
                 legacyCachePersistence,
                 MsalTestConstants.ClientId,
-                MsalTestConstants.SovereignEnvironment, // different env
+                MsalTestConstants.SovereignNetworkEnvironment, // different env
                 "uid4",
                 "tenantId4",
                 "sovereign_user5");
@@ -407,7 +407,7 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.CacheTests
             PopulateLegacyWithRtAndId(
                 legacyCachePersistence,
                 "other_client_id", // different client id
-                MsalTestConstants.SovereignEnvironment,
+                MsalTestConstants.SovereignNetworkEnvironment,
                 "uid5",
                 "tenantId5",
                 "user6");

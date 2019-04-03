@@ -119,7 +119,6 @@ namespace Microsoft.Identity.Client.Cache
         /// Item1 is a map of ClientInfo -> AdalUserInfo for those users that have ClientInfo 
         /// Item2 is a list of AdalUserInfo for those users that do not have ClientInfo
         /// </summary>
-        /// <remarks>Users are not filetered by enviroment</remarks>
         public static AdalUsersForMsalResult GetAllAdalUsersForMsal(
             ICoreLogger logger,
             ILegacyCachePersistence legacyCachePersistence,

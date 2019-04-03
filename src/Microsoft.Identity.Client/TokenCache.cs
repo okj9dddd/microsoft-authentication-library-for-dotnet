@@ -807,7 +807,7 @@ namespace Microsoft.Identity.Client
                 out AdalUsersForMsalResult adalUsersResult);
 
             // Multi-cloud support - must filter by env, namely by preferred_cache_env
-            var cacheEnv = await GetPreferedCacheEnvAvoidNetworkCallAsync(authority, accountCacheItems).ConfigureAwait(false);
+            var cacheEnv = await GetPreferredCacheEnvAvoidNetworkCallAsync(authority, accountCacheItems).ConfigureAwait(false);
             rtCacheItems = rtCacheItems.Where(rt => rt.Environment.Equals(cacheEnv, StringComparison.OrdinalIgnoreCase));
             accountCacheItems = accountCacheItems.Where(a => a.Environment.Equals(cacheEnv, StringComparison.OrdinalIgnoreCase));
 
@@ -867,7 +867,7 @@ namespace Microsoft.Identity.Client
             }
         }
 
-        private async Task<string> GetPreferedCacheEnvAvoidNetworkCallAsync(
+        private async Task<string> GetPreferredCacheEnvAvoidNetworkCallAsync(
             string authority,
             IEnumerable<MsalAccountCacheItem> accountCacheItems)
         {
@@ -884,7 +884,7 @@ namespace Microsoft.Identity.Client
 
             var envFromRequest = Authority.GetEnviroment(authority);
 
-            // Avoid a network call if all accounts are from the same network (no aliases!)
+            // Avoid a network call if all accounts are from the same enviroment (no aliases!)
             bool canAvoidInstanceDiscovery =
                  envToPreferredCache.ContainsKey(envFromRequest) &&
                  accountCacheItems.All(env => env.Environment.Equals(

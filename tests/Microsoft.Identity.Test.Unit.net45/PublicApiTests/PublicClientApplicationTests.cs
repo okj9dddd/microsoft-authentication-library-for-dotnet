@@ -636,7 +636,7 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
 
                 // another cache entry for different environment. user count should still be 2. Sovereign cloud user must not be returned
                 rtItem = new MsalRefreshTokenCacheItem(
-                    MsalTestConstants.SovereignEnvironment,
+                    MsalTestConstants.SovereignNetworkEnvironment,
                     MsalTestConstants.ClientId,
                     "someRT",
                     MockHelpers.CreateClientInfo(MsalTestConstants.Uid + "more1", MsalTestConstants.Utid));

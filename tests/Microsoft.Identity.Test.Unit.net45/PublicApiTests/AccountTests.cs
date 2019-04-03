@@ -39,6 +39,9 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
     [TestClass]
     public class AccountTests
     {
+        // Some tests load the TokenCache from a file and use this clientId 
+        private const string ClientIdInFile = "0615b6ca-88d4-4884-8729-b178178f7c27";
+
         [TestInitialize]
         public void TestInitialize()
         {
@@ -76,7 +79,7 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
 
             // Arrange
             PublicClientApplication pca = PublicClientApplicationBuilder
-                .Create("0615b6ca-88d4-4884-8729-b178178f7c27")
+                .Create(ClientIdInFile)
                 .WithAuthority(AzureCloudInstance.AzurePublic, AadAuthorityAudience.PersonalMicrosoftAccount)
                 .WithHttpClientFactory(factoryThatThrows)
                 .BuildConcrete();
@@ -102,7 +105,7 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
                 httpManager.AddInstanceDiscoveryMockHandler(); // this needs to happen because we don't keep track of aliases
 
                 PublicClientApplication pca = PublicClientApplicationBuilder
-                    .Create("0615b6ca-88d4-4884-8729-b178178f7c27")
+                    .Create(ClientIdInFile)
                     .WithAuthority(MsalTestConstants.AuthorityCommonTenantNotPrefAlias)
                     .WithHttpManager(httpManager)
                     .BuildConcrete();
@@ -156,7 +159,7 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
             factoryThatThrows.When(x => x.GetHttpClient()).Do(x => { Assert.Fail("A network call is being performed"); });
 
             var pcaDe = PublicClientApplicationBuilder
-              .Create("0615b6ca-88d4-4884-8729-b178178f7c27")
+              .Create(ClientIdInFile)
               .WithAuthority(AzureCloudInstance.AzureGermany, AadAuthorityAudience.PersonalMicrosoftAccount)
               .WithHttpClientFactory(factoryThatThrows)
               .BuildConcrete();
@@ -180,7 +183,7 @@ namespace Microsoft.Identity.Test.Unit.PublicApiTests
         private PublicClientApplication InitPcaForCloud(AzureCloudInstance cloud, HttpManager httpManager, string tokenCacheFile)
         {
             PublicClientApplication pca = PublicClientApplicationBuilder
-                  .Create("0615b6ca-88d4-4884-8729-b178178f7c27")
+                  .Create(ClientIdInFile)
                   .WithAuthority(cloud, AadAuthorityAudience.PersonalMicrosoftAccount)
                   .WithHttpManager(httpManager)
                   .BuildConcrete();
