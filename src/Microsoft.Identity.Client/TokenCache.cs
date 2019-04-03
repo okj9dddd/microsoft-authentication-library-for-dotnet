@@ -732,14 +732,13 @@ namespace Microsoft.Identity.Client
             }
         }
 
+        // TODO: TokenCache should not be responsible for knowing when to do instance dicovery or not
+        // there should be an InstanceDiscoveryManager that encapsulates all the logic
         private async Task<InstanceDiscoveryMetadataEntry> GetCachedOrDiscoverAuthorityMetaDataAsync(
             string authority,
             RequestContext requestContext)
         {
-            Uri authorityHost = new Uri(authority);
-            var authorityType = Authority.GetAuthorityType(authority);
-            if (authorityType == AuthorityType.Aad ||
-                authorityHost.Host.Equals(AzurePublicEnv, StringComparison.OrdinalIgnoreCase))
+            if (SupportsInstanceDicovery(authority))
             {
                 var instanceDiscoveryMetadata = await ServiceBundle.AadInstanceDiscovery.GetMetadataEntryAsync(
                     new Uri(authority),
@@ -748,6 +747,12 @@ namespace Microsoft.Identity.Client
             }
 
             return null;
+        }
+
+        private bool SupportsInstanceDicovery(string authority)
+        {
+            var authorityType = Authority.GetAuthorityType(authority);
+            return authorityType == AuthorityType.Aad;               
         }
 
         private InstanceDiscoveryMetadataEntry GetCachedAuthorityMetaData(string authority)
