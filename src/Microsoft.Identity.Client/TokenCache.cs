@@ -214,6 +214,8 @@ namespace Microsoft.Identity.Client
             AuthenticationRequestParameters requestParams,
             MsalTokenResponse response)
         {
+           // TODO: ensure that instance metadata has occured, otherwise we will use 
+
             // todo: could we look into modifying this to take tenantId to reduce the dependency on IValidatedAuthoritiesCache?
             var tenantId = Authority.CreateAuthority(ServiceBundle, requestParams.TenantUpdatedCanonicalAuthority)
                 .GetTenantId();
@@ -752,7 +754,11 @@ namespace Microsoft.Identity.Client
         private bool SupportsInstanceDicovery(string authority)
         {
             var authorityType = Authority.GetAuthorityType(authority);
-            return authorityType == AuthorityType.Aad;               
+            return authorityType == AuthorityType.Aad ||
+                // TODO: Not all discovery logic checks for this condition, this is a bug simialar to
+                // https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/issues/1037
+                (authorityType == AuthorityType.B2C &&
+                    Authority.GetEnviroment(authority).Equals(AzurePublicEnv)); 
         }
 
         private InstanceDiscoveryMetadataEntry GetCachedAuthorityMetaData(string authority)
@@ -811,10 +817,13 @@ namespace Microsoft.Identity.Client
                 out IEnumerable<MsalAccountCacheItem> accountCacheItems,
                 out AdalUsersForMsalResult adalUsersResult);
 
-            // Multi-cloud support - must filter by env, namely by preferred_cache_env
-            var cacheEnv = await GetPreferredCacheEnvAvoidNetworkCallAsync(authority, accountCacheItems).ConfigureAwait(false);
-            rtCacheItems = rtCacheItems.Where(rt => rt.Environment.Equals(cacheEnv, StringComparison.OrdinalIgnoreCase));
-            accountCacheItems = accountCacheItems.Where(a => a.Environment.Equals(cacheEnv, StringComparison.OrdinalIgnoreCase));
+            // Multi-cloud support - must filter by env, use all env aliases to avoid
+            // filtering out too much (e.g. bad MSAL implementations that do not save using PreferredCacheEnv
+            // or the PreferredCacheImpl changing in the future)
+            var aliases = await GetEnvAliasesTryAvoidNetworkCallAsync(authority, accountCacheItems).ConfigureAwait(false);
+
+            rtCacheItems = rtCacheItems.Where(rt => aliases.ContainsOrdinalIgnoreCase(rt.Environment));
+            accountCacheItems = accountCacheItems.Where(acc => aliases.ContainsOrdinalIgnoreCase(acc.Environment));
 
             IDictionary<string, Account> clientInfoToAccountMap = new Dictionary<string, Account>();
             foreach (MsalRefreshTokenCacheItem rtItem in rtCacheItems)
@@ -872,33 +881,36 @@ namespace Microsoft.Identity.Client
             }
         }
 
-        private async Task<string> GetPreferredCacheEnvAvoidNetworkCallAsync(
+        /// <summary>
+        /// Tries to get the env aliases of the authority for selecting accounts.
+        /// This can be done without network discovery if all the accounts belong to known envs.
+        /// If the list becomes stale (i.e. new env is introduced), GetAccounts will perform InstanceDiscovery
+        /// The list of known envs should not be used in any other scenario!
+        /// </summary>
+        private async Task<IEnumerable<string>> GetEnvAliasesTryAvoidNetworkCallAsync(
             string authority,
             IEnumerable<MsalAccountCacheItem> accountCacheItems)
         {
-            // this map is to try to avoid a network call when getting accounts and it is ok if it is not up to date
-            // but it should not be used in any other scenario
-            IDictionary<string, string> envToPreferredCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            var knownAadAliases = new List<HashSet<string>>()
             {
-                { AzurePublicEnv, "login.windows.net" },
-                { "login.partner.microsoftonline.cn", "login.partner.microsoftonline.cn" },
-                { "login.microsoftonline.de", "login.microsoftonline.de" },
-                { "login.microsoftonline.us", "login.microsoftonline.us" },
-                { "login-us.microsoftonline.com", "login-us.microsoftonline.com" },
+                new HashSet<string>(new[] { AzurePublicEnv, "login.windows.net", "login.microsoft.com", "sts.windows.net" }),
+                new HashSet<string>(new[] { "login.partner.microsoftonline.cn", "login.chinacloudapi.cn" }),
+                new HashSet<string>(new[] { "login.microsoftonline.de" }),
+                new HashSet<string>(new[] { "login.microsoftonline.us", "login.usgovcloudapi.net" }),
+                new HashSet<string>(new[] { "login-us.microsoftonline.com" }),
             };
 
             var envFromRequest = Authority.GetEnviroment(authority);
+            var aliases = knownAadAliases
+                .FirstOrDefault(cloudAliases => cloudAliases.ContainsOrdinalIgnoreCase(envFromRequest));
 
-            // Avoid a network call if all accounts are from the same enviroment (no aliases!)
             bool canAvoidInstanceDiscovery =
-                 envToPreferredCache.ContainsKey(envFromRequest) &&
-                 accountCacheItems.All(env => env.Environment.Equals(
-                     envToPreferredCache[envFromRequest],
-                     StringComparison.OrdinalIgnoreCase));
+                 aliases != null &&
+                 accountCacheItems.All(acc => aliases.ContainsOrdinalIgnoreCase(acc.Environment));
 
             if (canAvoidInstanceDiscovery)
             {
-                return await Task.FromResult(envToPreferredCache[envFromRequest]).ConfigureAwait(false);
+                return await Task.FromResult(aliases).ConfigureAwait(false);
             }
 
             var requestContext = new RequestContext(
@@ -908,7 +920,7 @@ namespace Microsoft.Identity.Client
             var instanceDiscoveryResult = await GetCachedOrDiscoverAuthorityMetaDataAsync(authority, requestContext)
                 .ConfigureAwait(false);
 
-            return instanceDiscoveryResult?.PreferredCache ?? envFromRequest;
+            return instanceDiscoveryResult?.Aliases ?? new[] { envFromRequest };
         }
 
         private static List<IAccount> UpdateWithAdalAccounts(string envFromRequest, AdalUsersForMsalResult adalUsersResult, IDictionary<string, Account> clientInfoToAccountMap)

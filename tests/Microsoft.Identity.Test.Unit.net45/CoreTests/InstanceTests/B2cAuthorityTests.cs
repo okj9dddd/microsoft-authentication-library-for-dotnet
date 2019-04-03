@@ -119,6 +119,7 @@ namespace Microsoft.Identity.Test.Unit.CoreTests.InstanceTests
 
         [TestMethod]
         [TestCategory("B2CAuthorityTests")]
+        [Ignore] // https://github.com/AzureAD/microsoft-authentication-library-for-dotnet/issues/1038
         public void B2CMicrosoftOnlineCreateAuthority()
         {
             using (var harness = new MockHttpAndServiceBundle())
