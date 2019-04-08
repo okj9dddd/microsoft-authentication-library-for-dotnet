@@ -91,8 +91,8 @@ namespace Microsoft.Identity.Test.UIAutomation
                 AcquireTokenADFSV4InteractiveFederatedTest,
                 AcquireTokenADFSV4InteractiveNonFederatedTest,
 
-                B2CFacebookB2CLoginAuthorityAcquireTokenTest,
-                B2CFacebookMicrosoftAuthorityAcquireTokenTest,
+                //B2CFacebookB2CLoginAuthorityAcquireTokenTest,
+                //B2CFacebookMicrosoftAuthorityAcquireTokenTest,
                 //B2CGoogleB2CLoginAuthorityAcquireTokenTest,
                 //B2CGoogleMicrosoftAuthorityAcquireTokenTest,
                 B2CLocalAccountAcquireTokenTest
