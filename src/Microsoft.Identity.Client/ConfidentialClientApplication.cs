@@ -57,7 +57,6 @@ namespace Microsoft.Identity.Client
     public sealed partial class ConfidentialClientApplication
         : ClientApplicationBase,
             IConfidentialClientApplication,
-            IConfidentialClientApplicationWithCertificate,
             IByRefreshToken
     {
         internal ConfidentialClientApplication(ApplicationConfiguration configuration)

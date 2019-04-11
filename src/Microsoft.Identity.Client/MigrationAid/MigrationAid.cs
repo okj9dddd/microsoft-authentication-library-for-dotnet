@@ -1683,44 +1683,6 @@ namespace Microsoft.Identity.Client
         }
 
         /// <summary>
-        /// [V2 API] Acquires an access token for this application (usually a Web API) from the authority configured in the application, in order to access
-        /// another downstream protected Web API on behalf of a user using the OAuth 2.0 On-Behalf-Of flow. (See https://aka.ms/msal-net-on-behalf-of).
-        /// This confidential client application was itself called with a token which will be provided in the
-        /// <paramref name="userAssertion">userAssertion</paramref> parameter.
-        /// This override sends the certificate, which helps certificate rotation in Azure AD
-        /// </summary>
-        /// <param name="scopes">Scopes requested to access a protected API</param>
-        /// <param name="userAssertion">Instance of <see cref="UserAssertion"/> containing credential information about
-        /// the user on behalf of whom to get a token.</param>
-        /// <returns>Authentication result containing a token for the requested scopes and account</returns>
-        /// <seealso cref="AcquireTokenOnBehalfOf(IEnumerable{string}, UserAssertion)"/> which is the corresponding V3 API
-        [Obsolete("Use AcquireTokenOnBehalfOf instead. " + MsalErrorMessage.AkaMsmsalnet3BreakingChanges, true)]
-        Task<AuthenticationResult> IConfidentialClientApplicationWithCertificate.AcquireTokenOnBehalfOfWithCertificateAsync(IEnumerable<string> scopes, UserAssertion userAssertion)
-        {
-            throw MigrationHelper.CreateMsalNet3BreakingChangesException();
-        }
-
-        /// <summary>
-        /// [V2 API] Acquires an access token for this application (usually a Web API) from a specific authority, in order to access
-        /// another downstream protected Web API on behalf of a user (See https://aka.ms/msal-net-on-behalf-of).
-        /// This confidential client application was itself called with a token which will be provided in the
-        /// This override sends the certificate, which helps certificate rotation in Azure AD
-        /// <paramref name="userAssertion">userAssertion</paramref> parameter.
-        /// </summary>
-        /// <param name="scopes">Scopes requested to access a protected API</param>
-        /// <param name="userAssertion">Instance of <see cref="UserAssertion"/> containing credential information about
-        /// the user on behalf of whom to get a token.</param>
-        /// <param name="authority">Specific authority for which the token is requested. Passing a different value than configured does not change the configured value</param>
-        /// <returns>Authentication result containing a token for the requested scopes and account</returns>
-        /// <seealso cref="AcquireTokenOnBehalfOf(IEnumerable{string}, UserAssertion)"/> which is the corresponding V3 API
-        [Obsolete("Use AcquireTokenOnBehalfOf instead. " + MsalErrorMessage.AkaMsmsalnet3BreakingChanges, true)]
-        Task<AuthenticationResult> IConfidentialClientApplicationWithCertificate.AcquireTokenOnBehalfOfWithCertificateAsync(IEnumerable<string> scopes, UserAssertion userAssertion,
-            string authority)
-        {
-            throw MigrationHelper.CreateMsalNet3BreakingChangesException();
-        }
-
-        /// <summary>
         /// [V2 API] Acquires a security token from the authority configured in the app using the authorization code previously received from the STS. It uses
         /// the OAuth 2.0 authorization code flow (See https://aka.ms/msal-net-authorization-code).
         /// It's usually used in Web Apps (for instance ASP.NET / ASP.NET Core Web apps) which sign-in users, and therefore receive an authorization code.
@@ -1766,42 +1728,6 @@ namespace Microsoft.Identity.Client
         /// <seealso cref="AcquireTokenForClient(IEnumerable{string})"/> which is the corresponding V3 API
         [Obsolete("Use AcquireTokenForClient instead. " + MsalErrorMessage.AkaMsmsalnet3BreakingChanges, true)]
         public Task<AuthenticationResult> AcquireTokenForClientAsync(IEnumerable<string> scopes, bool forceRefresh)
-        {
-            throw MigrationHelper.CreateMsalNet3BreakingChangesException();
-        }
-
-        /// <summary>
-        /// [V2 API] Acquires token from the service for the confidential client using the client credentials flow. (See https://aka.ms/msal-net-client-credentials)
-        /// This method enables application developers to achieve easy certificate roll-over
-        /// in Azure AD: this method will send the public certificate to Azure AD
-        /// along with the token request, so that Azure AD can use it to validate the subject name based on a trusted issuer policy.
-        /// This saves the application admin from the need to explicitly manage the certificate rollover
-        /// (either via portal or powershell/CLI operation)
-        /// </summary>
-        /// <param name="scopes">Scopes requested to access a protected API</param>
-        /// <returns>Authentication result containing application token for the requested scopes</returns>
-        /// <seealso cref="AcquireTokenForClient(IEnumerable{string})"/> which is the corresponding V3 API
-        [Obsolete("Use AcquireTokenForClient instead. " + MsalErrorMessage.AkaMsmsalnet3BreakingChanges, true)]
-        Task<AuthenticationResult> IConfidentialClientApplicationWithCertificate.AcquireTokenForClientWithCertificateAsync(IEnumerable<string> scopes)
-        {
-            throw MigrationHelper.CreateMsalNet3BreakingChangesException();
-        }
-
-        /// <summary>
-        /// [V2 API] Acquires token from the service for the confidential client using the client credentials flow. (See https://aka.ms/msal-net-client-credentials)
-        /// This method attempts to look up valid access token in the cache unless<paramref name="forceRefresh"/> is true
-        /// This method enables application developers to achieve easy certificate roll-over
-        /// in Azure AD: this method will send the public certificate to Azure AD
-        /// along with the token request, so that Azure AD can use it to validate the subject name based on a trusted issuer policy.
-        /// This saves the application admin from the need to explicitly manage the certificate rollover
-        /// (either via portal or powershell/CLI operation)
-        /// </summary>
-        /// <param name="scopes">Scopes requested to access a protected API</param>
-        /// <param name="forceRefresh">If TRUE, API will ignore the access token in the cache and attempt to acquire new access token using client credentials</param>
-        /// <returns>Authentication result containing application token for the requested scopes</returns>
-        /// <seealso cref="AcquireTokenForClient(IEnumerable{string})"/> which is the corresponding V3 API
-        [Obsolete("Use AcquireTokenForClient instead. " + MsalErrorMessage.AkaMsmsalnet3BreakingChanges, true)]
-        Task<AuthenticationResult> IConfidentialClientApplicationWithCertificate.AcquireTokenForClientWithCertificateAsync(IEnumerable<string> scopes, bool forceRefresh)
         {
             throw MigrationHelper.CreateMsalNet3BreakingChangesException();
         }
