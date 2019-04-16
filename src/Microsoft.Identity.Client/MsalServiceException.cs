@@ -174,12 +174,13 @@ namespace Microsoft.Identity.Client
                 _oauth2ResponseBase = value;
                 Claims = _oauth2ResponseBase?.Claims;
                 CorrelationId = _oauth2ResponseBase?.CorrelationId;
+                SubError = _oauth2ResponseBase?.SubError;
             }
         }
 
         /// <summary>
         /// Gets the status code returned from http layer. This status code is either the <c>HttpStatusCode</c> in the inner
-        /// <see cref="T:System.Net.Http.HttpRequestException"/> response or the the NavigateError Event Status Code in a browser based flow (See
+        /// <see cref="System.Net.Http.HttpRequestException"/> response or the the NavigateError Event Status Code in a browser based flow (See
         /// http://msdn.microsoft.com/en-us/library/bb268233(v=vs.85).aspx).
         /// You can use this code for purposes such as implementing retry logic or error investigation.
         /// </summary>
@@ -193,11 +194,10 @@ namespace Microsoft.Identity.Client
         /// provide additional claims, such as doing two factor authentication. The are two cases:
         /// <list type="bullent">
         /// <item><description>
-        /// If your application is a <see cref="PublicClientApplication"/>, you should just call an override of <see cref="PublicClientApplication.AcquireTokenAsync(System.Collections.Generic.IEnumerable{string}, string, Prompt, string, System.Collections.Generic.IEnumerable{string}, string)"/>
-        /// in <see cref="PublicClientApplication"/> having an <c>extraQueryParameter</c> argument, and add the following string <c>$"claims={ex.Claims}"</c>
-        /// to the extraQueryParameters, where ex is an instance of this exception.
+        /// If your application is a <see cref="IPublicClientApplication"/>, you should just call <see cref="IPublicClientApplication.AcquireTokenInteractive(System.Collections.Generic.IEnumerable{string})"/>
+        /// and add the <see cref="AbstractAcquireTokenParameterBuilder{T}.WithClaims(string)"/> modifier.
         /// </description></item>
-        /// <item>><description>If your application is a <see cref="ConfidentialClientApplication"/>, (therefore doing the On-Behalf-Of flow), you should throw an Http unauthorize 
+        /// <item>><description>If your application is a <see cref="IConfidentialClientApplication"/>, (therefore doing the On-Behalf-Of flow), you should throw an Http unauthorize 
         /// exception with a message containing the claims</description></item>
         /// </list>
         /// For more details see https://aka.ms/msal-net-claim-challenge
@@ -209,6 +209,12 @@ namespace Microsoft.Identity.Client
         /// Raw response body received from the server.
         /// </summary>
         public string ResponseBody { get; internal set; }
+
+        /// <remarks>
+        /// The suberror should not be exposed for public consumption yet, as STS needs to do some work
+        /// first.
+        /// </remarks>
+        internal string SubError { get; set; }
 
         /// <summary>
         /// Contains the http headers from the server response that indicated an error. 
@@ -241,6 +247,7 @@ namespace Microsoft.Identity.Client
         private const string ClaimsKey = "claims";
         private const string ResponseBodyKey = "response_body";
         private const string CorrelationIdKey = "correlation_id";
+        private const string SubErrorKey = "sub_error";
 
         internal override void PopulateJson(JObject jobj)
         {
@@ -249,6 +256,7 @@ namespace Microsoft.Identity.Client
             jobj[ClaimsKey] = Claims;
             jobj[ResponseBodyKey] = ResponseBody;
             jobj[CorrelationIdKey] = CorrelationId;
+            jobj[SubErrorKey] = SubError;
         }
 
         internal override void PopulateObjectFromJson(JObject jobj)
@@ -258,6 +266,7 @@ namespace Microsoft.Identity.Client
             Claims = JsonUtils.GetExistingOrEmptyString(jobj, ClaimsKey);
             ResponseBody = JsonUtils.GetExistingOrEmptyString(jobj, ResponseBodyKey);
             CorrelationId = JsonUtils.GetExistingOrEmptyString(jobj, CorrelationIdKey);
+            SubError = JsonUtils.GetExistingOrEmptyString(jobj, SubErrorKey);
         }
     }
 }
